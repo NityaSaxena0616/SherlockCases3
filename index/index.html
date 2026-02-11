@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sherlock Holmes: Interactive Cases - Enhanced Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Garamond', 'Georgia', serif;
+            background: #000;
+            color: #e8e8e8;
+            overflow-x: hidden;
+            cursor: default;
+        }
+
+        /* Film grain - optimized */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxwYXRoIGQ9Ik0wIDBoMzAwdjMwMEgweiIgZmlsdGVyPSJ1cmwoI2EpIiBvcGFjaXR5PSIuMDUiLz48L3N2Zz4=');
+            opacity: 0.04;
+            pointer-events: none;
+            z-index: 9999;
+            animation: grain 8s steps(10) infinite;
+            will-change: transform;
+        }
+
+        @keyframes grain {
+            0%, 100% { transform: translate(0, 0); }
+            10% { transform: translate(-5%, -10%); }
+            30% { transform: translate(3%, -15%); }
+            50% { transform: translate(12%, 9%); }
+            70% { transform: translate(-9%, 4%); }
+            90% { transform: translate(-1%, -7%); }
+        }
+
+        /* Loading - smoother */
+        #loading {
+            position: fixed;
+            width: 100%;
+            height: 100vh;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-text {
+            font-size: 1.2em;
+            color: #d4af37;
+            letter-spacing: 4px;
+            margin-bottom: 25px;
+            animation: loading-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes loading-pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .loading-bar {
+            width: 350px;
+            height: 3px;
+            background: rgba(212, 175, 55, 0.2);
+            position: relative;
+            overflow: hidden;
+            border-radius: 2px;
+        }
+
+        .loading-progress {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #d4af37, #f4e4a6, #d4af37);
+            width: 0%;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.6);
+        }
+
+        /* Canvas */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        /* Atmospheric layers - optimized */
+        .fog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 2;
+            background: radial-gradient(ellipse at 50% 40%, transparent 20%, rgba(0, 0, 0, 0.4) 100%);
+        }
+
+        .light-rays {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 3;
+            opacity: 0.12;
+            background: 
+                linear-gradient(120deg, transparent 0%, rgba(212, 175, 55, 0.05) 50%, transparent 100%),
+                linear-gradient(240deg, transparent 0%, rgba(212, 175, 55, 0.03) 50%, transparent 100%);
+            animation: light-shift 12s ease-in-out infinite;
+            will-change: opacity, transform;
+        }
+
+        @keyframes light-shift {
+            0%, 100% { opacity: 0.08; transform: rotate(0deg); }
+            50% { opacity: 0.15; transform: rotate(2deg); }
+        }
+
+        /* Audio control */
+        .audio-toggle {
+            position: fixed;
+            top: 25px;
+            right: 25px;
+            z-index: 1000;
+            width: 55px;
+            height: 55px;
+            background: rgba(15, 15, 15, 0.85);
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(12px);
+        }
+
+        .audio-toggle:hover {
+            border-color: #d4af37;
+            box-shadow: 0 0 25px rgba(212, 175, 55, 0.4);
+            transform: scale(1.05);
+        }
+
+        .audio-toggle::before {
+            content: '🔊';
+            font-size: 1.3em;
+        }
+
+        .audio-toggle.muted::before {
+            content: '🔇';
+            opacity: 0.6;
+        }
+
+        /* Skip button */
+        .skip-button {
+            position: fixed;
+            bottom: 35px;
+            right: 35px;
+            z-index: 200;
+            padding: 12px 35px;
+            background: rgba(15, 15, 15, 0.9);
+            border: 2px solid rgba(212, 175, 55, 0.5);
+            color: #d4af37;
+            font-size: 1em;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: 'Garamond', 'Georgia', serif;
+            backdrop-filter: blur(12px);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .skip-button.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .skip-button:hover {
+            background: rgba(212, 175, 55, 0.15);
+            border-color: #d4af37;
+            transform: scale(1.05);
+            box-shadow: 0 0 25px rgba(212, 175, 55, 0.4);
+        }
+
+        /* Sherlock portrait when speaking */
+        .sherlock-portrait {
+            position: fixed;
+            bottom: 140px;
+            left: 50px;
+            width: 200px;
+            height: 240px;
+            border: 3px solid #d4af37;
+            border-radius: 8px;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateX(-120px);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 150;
+            box-shadow: 0 10px 40px rgba(212, 175, 55, 0.5);
+            pointer-events: none;
+            background: #000;
+        }
+
+        .sherlock-portrait.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .sherlock-portrait img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center top;
+        }
+
+        /* Cinematic subtitles - enhanced */
+        .subtitle-container {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 92%;
+            max-width: 1100px;
+            text-align: center;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .subtitle {
+            display: inline-block;
+            padding: 18px 50px;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.75));
+            font-size: 1.35em;
+            line-height: 1.7;
+            letter-spacing: 0.8px;
+            margin-bottom: 8px;
+            opacity: 0;
+            transform: translateY(25px);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 4px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            will-change: opacity, transform;
+        }
+
+        .subtitle.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .subtitle.sherlock {
+            color: #d4af37;
+            font-style: italic;
+            border-left: 3px solid #d4af37;
+        }
+
+        .subtitle.character {
+            color: #e8e8e8;
+        }
+
+        .subtitle.narration {
+            color: #b8b8c8;
+            font-size: 1.15em;
+        }
+
+        .speaker-name {
+            display: block;
+            font-size: 0.7em;
+            color: #999;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        /* Landing - improved */
+        #landing-scene {
+            position: fixed;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #landing-scene.visible {
+            opacity: 1;
+        }
+
+        .landing-title {
+            font-size: 2.2em;
+            color: #d4af37;
+            letter-spacing: 5px;
+            margin-bottom: 60px;
+            opacity: 0;
+            transform: translateY(30px);
+            text-align: center;
+            padding: 0 30px;
+            text-shadow: 0 2px 15px rgba(212, 175, 55, 0.4);
+        }
+
+        .stories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            max-width: 1200px;
+            width: 90%;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .story-card {
+            padding: 35px 30px;
+            background: rgba(15, 15, 15, 0.92);
+            border: 2px solid rgba(212, 175, 55, 0.35);
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: center;
+            backdrop-filter: blur(15px);
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .story-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.12), transparent);
+            transition: left 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .story-card:hover::before {
+            left: 100%;
+        }
+
+        .story-card:hover {
+            border-color: #d4af37;
+            box-shadow: 0 8px 35px rgba(212, 175, 55, 0.4);
+            transform: translateY(-8px);
+            background: rgba(212, 175, 55, 0.08);
+        }
+
+        .story-title {
+            font-size: 1.5em;
+            color: #e8e8e8;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .story-description {
+            font-size: 1em;
+            color: #a8a8a8;
+            line-height: 1.6;
+            letter-spacing: 0.5px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .story-year {
+            font-size: 0.85em;
+            color: #d4af37;
+            margin-top: 15px;
+            font-style: italic;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Interactive character markers - enhanced */
+        .character-marker {
+            position: absolute;
+            width: 90px;
+            height: 90px;
+            border: 3px solid rgba(212, 175, 55, 0.5);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.15), transparent 70%);
+            backdrop-filter: blur(3px);
+            will-change: transform;
+        }
+
+        .character-marker:hover {
+            border-color: #d4af37;
+            transform: scale(1.12);
+            box-shadow: 0 0 35px rgba(212, 175, 55, 0.5);
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.25), transparent 70%);
+        }
+
+        .character-marker.active {
+            border-color: #d4af37;
+            box-shadow: 0 0 45px rgba(212, 175, 55, 0.7);
+            animation: pulse-marker 2.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse-marker {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+
+        .character-label {
+            position: absolute;
+            bottom: -35px;
+            font-size: 0.9em;
+            color: #d4af37;
+            white-space: nowrap;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Story container */
+        #story-container {
+            position: fixed;
+            width: 100%;
+            height: 100vh;
+            z-index: 5;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #story-container.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .scroll-hint {
+            position: fixed;
+            bottom: 35px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(212, 175, 55, 0.7);
+            font-size: 0.95em;
+            letter-spacing: 3px;
+            z-index: 15;
+            animation: hint-pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes hint-pulse {
+            0%, 100% { opacity: 0.5; transform: translate(-50%, 0); }
+            50% { opacity: 1; transform: translate(-50%, -5px); }
+        }
+
+        /* Question scene - enhanced */
+        #question-scene {
+            position: fixed;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(0, 0, 0, 0.88);
+            backdrop-filter: blur(20px);
+        }
+
+        #question-scene.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .question-title {
+            font-size: 2.2em;
+            color: #d4af37;
+            letter-spacing: 4px;
+            margin-bottom: 70px;
+            text-align: center;
+            padding: 0 30px;
+            text-shadow: 0 3px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        .suspects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 30px;
+            max-width: 1000px;
+            padding: 0 30px;
+        }
+
+        .suspect-card {
+            padding: 35px 30px;
+            background: rgba(15, 15, 15, 0.95);
+            border: 3px solid rgba(212, 175, 55, 0.4);
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: center;
+            backdrop-filter: blur(15px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .suspect-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.1), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .suspect-card:hover::before {
+            left: 100%;
+        }
+
+        .suspect-card:hover {
+            transform: translateY(-8px);
+            border-color: #d4af37;
+            box-shadow: 0 15px 40px rgba(212, 175, 55, 0.3);
+            background: rgba(212, 175, 55, 0.08);
+        }
+
+        .suspect-name {
+            font-size: 1.4em;
+            color: #e8e8e8;
+            letter-spacing: 2.5px;
+            margin-bottom: 12px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .suspect-detail {
+            font-size: 1em;
+            color: #a8a8a8;
+            font-style: italic;
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Reveal scene - enhanced */
+        #reveal-scene {
+            position: fixed;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 25;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(0, 0, 0, 0.96);
+            backdrop-filter: blur(25px);
+        }
+
+        #reveal-scene.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .reveal-message {
+            font-size: 2.8em;
+            color: #d4af37;
+            letter-spacing: 5px;
+            margin-bottom: 50px;
+            text-align: center;
+            padding: 0 30px;
+            text-shadow: 0 4px 25px rgba(212, 175, 55, 0.5);
+            animation: reveal-fade-in 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes reveal-fade-in {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .reveal-explanation {
+            max-width: 900px;
+            padding: 35px 50px;
+            background: rgba(15, 15, 15, 0.85);
+            border-left: 4px solid #d4af37;
+            font-size: 1.2em;
+            line-height: 2;
+            margin-bottom: 50px;
+            text-align: center;
+            backdrop-filter: blur(15px);
+            border-radius: 4px;
+            animation: reveal-fade-in 1s cubic-bezier(0.4, 0, 0.2, 1) 0.3s forwards;
+            opacity: 0;
+        }
+
+        .clue-highlight {
+            color: #d4af37;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+        }
+
+        .restart-button {
+            padding: 18px 60px;
+            background: transparent;
+            border: 3px solid #d4af37;
+            color: #d4af37;
+            font-size: 1.15em;
+            letter-spacing: 3px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: 'Garamond', 'Georgia', serif;
+            animation: reveal-fade-in 1s cubic-bezier(0.4, 0, 0.2, 1) 0.6s forwards;
+            opacity: 0;
+        }
+
+        .restart-button:hover {
+            background: rgba(212, 175, 55, 0.15);
+            transform: scale(1.08);
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .landing-title { font-size: 1.5em; letter-spacing: 3px; }
+            .subtitle { font-size: 1.1em; padding: 15px 35px; }
+            .question-title { font-size: 1.7em; }
+            .suspects-grid { grid-template-columns: 1fr; }
+            .reveal-message { font-size: 2em; }
+            .stories-grid { grid-template-columns: 1fr; }
+            .sherlock-portrait { width: 120px; height: 150px; left: 20px; bottom: 120px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div class="loading-text">ENTERING THE MIND OF SHERLOCK HOLMES</div>
+        <div class="loading-bar">
+            <div class="loading-progress" id="loading-progress"></div>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+    <div class="fog-overlay"></div>
+    <div class="light-rays"></div>
+    <div class="audio-toggle" id="audio-toggle"></div>
+    <button class="skip-button" id="skip-button" onclick="skipToQuestion()">SKIP TO MYSTERY →</button>
+    
+    <div class="sherlock-portrait" id="sherlock-portrait">
+    <img src="image2.jpg" alt="Sherlock Holmes">
+</div>
+
+
+    <div class="subtitle-container" id="subtitle-container"></div>
+
+    <div id="landing-scene">
+        <div class="landing-title">Which case would you like to revisit?</div>
+        <div class="stories-grid" id="stories-grid">
+            <div class="story-card" data-story="speckled">
+                <div class="story-title">The Speckled Band</div>
+                <div class="story-description">A deadly serpent, a locked room, and a sinister stepfather.</div>
+                <div class="story-year">Published 1892</div>
+            </div>
+            <div class="story-card" data-story="scarlet">
+                <div class="story-title">A Study in Scarlet</div>
+                <div class="story-description">Holmes' first case: murder, revenge, and a ring.</div>
+                <div class="story-year">Published 1887</div>
+            </div>
+            <div class="story-card" data-story="baskerville">
+                <div class="story-title">The Hound of the Baskervilles</div>
+                <div class="story-description">A spectral hound haunts the moors of Devonshire.</div>
+                <div class="story-year">Published 1902</div>
+            </div>
+            <div class="story-card" data-story="bohemia">
+                <div class="story-title">A Scandal in Bohemia</div>
+                <div class="story-description">The woman who outwitted the great detective.</div>
+                <div class="story-year">Published 1891</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="story-container">
+        <div class="scroll-hint">Click characters to hear their testimony</div>
+    </div>
+
+    <div id="question-scene">
+        <div class="question-title">So... who do you believe is the killer?</div>
+        <div class="suspects-grid" id="suspects-grid">
+            <!-- Dynamically populated based on selected story -->
+        </div>
+    </div>
+
+    <div id="reveal-scene">
+        <div class="reveal-message" id="reveal-message"></div>
+        <div class="reveal-explanation" id="reveal-explanation"></div>
+        <button class="restart-button" onclick="restartExperience()">Begin Again</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <script>
+        // GLOBALS
+        let scene, camera, renderer;
+        let sherlockModel, helenModel, roylottModel;
+        let fogParticles = [], dustParticles = [];
+        let audioEnabled = true;
+        let storyPhase = 'landing';
+        let currentDialogue = 0;
+        let characterModels = {};
+        let selectedStory = null;
+        let dialogueTimeouts = [];
+
+        // STORY DATABASE - SHORTER VERSIONS
+        const STORIES = {
+            speckled: {
+                title: 'The Speckled Band',
+                dialogue: [
+                    { speaker: 'Helen Stoner', text: 'Mr. Holmes, my sister died mysteriously. Her last words were "The speckled band!"', type: 'character', delay: 1000 },
+                    { speaker: 'Sherlock Holmes', text: 'Tell me what you observed that night, Miss Stoner.', type: 'sherlock', delay: 5500 },
+                    { speaker: 'Helen Stoner', text: 'A low whistle, then a clanging sound. I found her convulsing in her room.', type: 'character', delay: 10000 },
+                    { speaker: 'Sherlock Holmes', text: 'The ventilator between rooms, the dummy bell-rope, the bed bolted to the floor... most irregular.', type: 'sherlock', delay: 15000 },
+                    { speaker: 'Narration', text: 'That night at 3 AM, Holmes strikes at a creature in the darkness...', type: 'narration', delay: 20000 }
+                ],
+                suspects: [
+                    { id: 'roylott', name: 'Dr. Roylott', detail: 'The Stepfather' },
+                    { id: 'julia', name: 'Julia Stoner', detail: 'The Deceased Sister' },
+                    { id: 'servants', name: 'The Servants', detail: 'Household Staff' },
+                    { id: 'helen', name: 'Helen Stoner', detail: 'The Client' }
+                ],
+                solution: 'roylott',
+                correctMessage: 'Excellent deduction, Holmes.',
+                correctExplanation: `<span class="clue-highlight">Dr. Roylott</span> trained a deadly swamp adder to crawl through the <span class="clue-highlight">ventilator</span> and down the <span class="clue-highlight">bell-rope</span>. The <span class="clue-highlight">bed bolted to the floor</span> ensured his victim stayed within reach. When Holmes struck the serpent, it retreated and killed its master.`,
+                incorrectMessage: 'Not quite, Holmes.',
+                incorrectExplanation: `The answer was <span class="clue-highlight">Dr. Roylott</span>. The clues: the dummy bell-rope, the ventilator, the bolted bed, and Julia's dying words. A trained Indian swamp adder was the weapon. His motive? The inheritance lost upon marriage.`
+            },
+            scarlet: {
+                title: 'A Study in Scarlet',
+                dialogue: [
+                    { speaker: 'Dr. Watson', text: 'Holmes, a body in Lauriston Gardens. No wounds, no cause of death.', type: 'character', delay: 1000 },
+                    { speaker: 'Sherlock Holmes', text: 'Observe the contorted face. And here, written in blood: "RACHE." German for revenge.', type: 'sherlock', delay: 5500 },
+                    { speaker: 'Inspector Lestrade', text: 'A wedding ring was found, though the victim was unmarried.', type: 'character', delay: 10000 },
+                    { speaker: 'Sherlock Holmes', text: 'Two pills—one poison, one harmless. A deadly game of chance forced upon the victim.', type: 'sherlock', delay: 14500 },
+                    { speaker: 'Narration', text: 'The trail leads to America, to murder, and revenge decades old.', type: 'narration', delay: 19000 }
+                ],
+                suspects: [
+                    { id: 'hope', name: 'Jefferson Hope', detail: 'The Cab Driver' },
+                    { id: 'stangerson', name: 'Joseph Stangerson', detail: 'The Secretary' },
+                    { id: 'drebber', name: 'Enoch Drebber', detail: 'The Victim' },
+                    { id: 'lestrade', name: 'Inspector Lestrade', detail: 'Scotland Yard' }
+                ],
+                solution: 'hope',
+                correctMessage: 'Your powers of deduction remain sharp.',
+                correctExplanation: `<span class="clue-highlight">Jefferson Hope</span> was the murderer, seeking revenge for Lucy Ferrier's death. The <span class="clue-highlight">wedding ring</span> was Lucy's. The pills forced his victims to face arbitrary cruelty. A revenge twenty years in the making.`,
+                incorrectMessage: 'You overlooked crucial details.',
+                incorrectExplanation: `The killer was <span class="clue-highlight">Jefferson Hope</span>. The ring belonged to Lucy Ferrier, whose death he swore to avenge. His method: two pills, forcing victims to face the same arbitrary cruelty shown to Lucy.`
+            },
+            baskerville: {
+                title: 'The Hound of the Baskervilles',
+                dialogue: [
+                    { speaker: 'Dr. Mortimer', text: 'Mr. Holmes, Sir Charles Baskerville is dead. Face frozen in terror on the moor.', type: 'character', delay: 1000 },
+                    { speaker: 'Sherlock Holmes', text: 'The legend speaks of a spectral hound. But footprints never lie.', type: 'sherlock', delay: 5500 },
+                    { speaker: 'Dr. Watson', text: 'I saw it! A massive hound, glowing with hellfire across the Grimpen Mire!', type: 'character', delay: 10000 },
+                    { speaker: 'Sherlock Holmes', text: 'Phosphorus, Watson. Applied for an unearthly appearance. But who benefits from his death?', type: 'sherlock', delay: 14500 },
+                    { speaker: 'Sherlock Holmes', text: 'Jack Stapleton... or rather, Rodger Baskerville, the black sheep thought dead.', type: 'sherlock', delay: 19000 }
+                ],
+                suspects: [
+                    { id: 'stapleton', name: 'Jack Stapleton', detail: 'The Naturalist' },
+                    { id: 'barrymore', name: 'Barrymore', detail: 'The Butler' },
+                    { id: 'selden', name: 'Selden', detail: 'The Convict' },
+                    { id: 'mortimer', name: 'Dr. Mortimer', detail: 'The Doctor' }
+                ],
+                solution: 'stapleton',
+                correctMessage: 'Elementary work, my dear fellow.',
+                correctExplanation: `<span class="clue-highlight">Jack Stapleton</span>—or Rodger Baskerville—was the murderer. The <span class="clue-highlight">phosphorescent hound</span> was designed to terrify victims into the Grimpen Mire. His motive was the Baskerville fortune. He died in the mire he used to conceal his crimes.`,
+                incorrectMessage: 'You have been deceived.',
+                incorrectExplanation: `<span class="clue-highlight">Jack Stapleton</span> was Rodger Baskerville, the secret heir. He used a hound painted with <span class="clue-highlight">phosphorus</span> to frighten relatives to death. Pure greed drove him.`
+            },
+            bohemia: {
+                title: 'A Scandal in Bohemia',
+                dialogue: [
+                    { speaker: 'The King', text: 'Mr. Holmes, a photograph exists with Irene Adler that could ruin me.', type: 'character', delay: 1000 },
+                    { speaker: 'Sherlock Holmes', text: 'She keeps it as insurance against your interference. Clever indeed.', type: 'sherlock', delay: 5500 },
+                    { speaker: 'Narration', text: 'Holmes stages a fake fire to reveal where Irene hides the photograph.', type: 'narration', delay: 10000 },
+                    { speaker: 'Dr. Watson', text: 'Holmes, she looked right at you! Could she have recognized your disguise?', type: 'character', delay: 14500 },
+                    { speaker: 'Sherlock Holmes', text: 'She did, Watson. The photograph is gone. She has outwitted me. To me, she is always THE woman.', type: 'sherlock', delay: 19000 }
+                ],
+                suspects: [
+                    { id: 'irene', name: 'Irene Adler', detail: 'The Opera Singer' },
+                    { id: 'norton', name: 'Godfrey Norton', detail: 'The Lawyer' },
+                    { id: 'king', name: 'The King of Bohemia', detail: 'The Royal Client' },
+                    { id: 'servant', name: 'The Servant', detail: 'Household Staff' }
+                ],
+                solution: 'irene',
+                correctMessage: 'You understand the game.',
+                correctExplanation: `There was no crime. <span class="clue-highlight">Irene Adler</span> was the victor. She <span class="clue-highlight">saw through Holmes's disguise</span> and fled with Godfrey Norton, leaving a letter promising silence. Holmes kept her photograph as a reminder he'd been beaten by a woman's intellect.`,
+                incorrectMessage: 'You misread the game.',
+                incorrectExplanation: `<span class="clue-highlight">Irene Adler</span> was no villain—she protected herself from a powerful man. She saw through Holmes's disguise and fled, leaving assurances of silence. Holmes lost this battle.`
+            }
+        };
+
+        window.addEventListener('load', init);
+
+        function init() {
+            setupThreeJS();
+            createAtmosphere();
+            createCharacters();
+            animate();
+            simulateLoading();
+            setupLandingInteractions();
+            setupAudioToggle();
+        }
+
+        function setupThreeJS() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x080808);
+            scene.fog = new THREE.Fog(0x0a0a0a, 8, 45);
+
+            camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(2, 3.5, 20);
+            camera.lookAt(0, 2.5, 0);
+
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true, 
+                alpha: true,
+                powerPreference: "high-performance"
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.1;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0x1a1a2a, 0.35);
+            scene.add(ambientLight);
+
+            const keyLight = new THREE.DirectionalLight(0xd4af37, 1.4);
+            keyLight.position.set(-10, 15, 10);
+            keyLight.castShadow = true;
+            keyLight.shadow.mapSize.width = 2048;
+            keyLight.shadow.mapSize.height = 2048;
+            scene.add(keyLight);
+
+            const rimLight = new THREE.DirectionalLight(0x4169e1, 0.7);
+            rimLight.position.set(6, 4, -10);
+            scene.add(rimLight);
+
+            const fillLight = new THREE.PointLight(0xff9955, 0.6, 25);
+            fillLight.position.set(-4, 3, 12);
+            scene.add(fillLight);
+
+            const candle1 = new THREE.PointLight(0xff8833, 0.9, 18);
+            candle1.position.set(-6, 2.5, 4);
+            scene.add(candle1);
+
+            const candle2 = new THREE.PointLight(0xff8833, 0.8, 15);
+            candle2.position.set(6, 2.5, 4);
+            scene.add(candle2);
+
+            window.candleLights = [candle1, candle2];
+
+            window.addEventListener('resize', onWindowResize);
+            document.addEventListener('mousemove', onMouseMove);
+        }
+
+        function createAtmosphere() {
+            createFogLayer(600, 40, 0.7, 0.45);
+            createFogLayer(500, 60, 0.5, 0.3);
+            createFogLayer(400, 90, 0.3, 0.18);
+            createDustParticles();
+            createVolumetricRays();
+        }
+
+        function createFogLayer(count, spread, size, opacity) {
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(count * 3);
+            const velocities = [];
+
+            for (let i = 0; i < count * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * spread;
+                positions[i + 1] = Math.random() * 18 - 3;
+                positions[i + 2] = (Math.random() - 0.5) * spread;
+                
+                velocities.push({
+                    x: (Math.random() - 0.5) * 0.018,
+                    y: Math.random() * 0.01 + 0.003,
+                    z: (Math.random() - 0.5) * 0.018
+                });
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const material = new THREE.PointsMaterial({
+                color: 0x9999aa,
+                size: size,
+                transparent: true,
+                opacity: opacity,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            fogParticles.push({ mesh: particles, velocities });
+        }
+
+        function createDustParticles() {
+            const count = 250;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(count * 3);
+            const velocities = [];
+
+            for (let i = 0; i < count * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 50;
+                positions[i + 1] = Math.random() * 25;
+                positions[i + 2] = (Math.random() - 0.5) * 50;
+                
+                velocities.push({
+                    x: (Math.random() - 0.5) * 0.012,
+                    y: -Math.random() * 0.025 - 0.015,
+                    z: (Math.random() - 0.5) * 0.012
+                });
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const material = new THREE.PointsMaterial({
+                color: 0xdddddd,
+                size: 0.18,
+                transparent: true,
+                opacity: 0.7,
+                blending: THREE.NormalBlending
+            });
+
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            dustParticles.push({ mesh: particles, velocities, isDust: true });
+        }
+
+        function createVolumetricRays() {
+            const rayGeometry = new THREE.PlaneGeometry(4, 30);
+            const rayMaterial = new THREE.MeshBasicMaterial({
+                color: 0xd4af37,
+                transparent: true,
+                opacity: 0.09,
+                side: THREE.DoubleSide,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            for (let i = 0; i < 6; i++) {
+                const ray = new THREE.Mesh(rayGeometry, rayMaterial);
+                ray.position.set(
+                    (Math.random() - 0.5) * 25,
+                    12,
+                    (Math.random() - 0.5) * 25
+                );
+                ray.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.4;
+                ray.rotation.z = Math.random() * Math.PI * 2;
+                scene.add(ray);
+            }
+        }
+
+        function createCharacters() {
+            sherlockModel = createSherlockCharacter();
+            sherlockModel.position.set(3, 0, 6);
+            scene.add(sherlockModel);
+            characterModels.sherlock = sherlockModel;
+
+            helenModel = createHelenCharacter();
+            helenModel.position.set(-3.5, 0, 5);
+            scene.add(helenModel);
+            characterModels.helen = helenModel;
+
+            roylottModel = createRoylottCharacter();
+            roylottModel.position.set(0, 0, -3);
+            roylottModel.rotation.y = Math.PI;
+            scene.add(roylottModel);
+            characterModels.roylott = roylottModel;
+        }
+
+        function createSherlockCharacter() {
+            const group = new THREE.Group();
+            const coatMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2a, roughness: 0.65, metalness: 0.1 });
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xd4a574, roughness: 0.55 });
+
+            const bodyGeo = new THREE.CylinderGeometry(0.7, 1, 4.2, 12);
+            const body = new THREE.Mesh(bodyGeo, coatMat);
+            body.position.y = 1.6;
+            body.castShadow = true;
+            group.add(body);
+
+            const shoulderGeo = new THREE.BoxGeometry(2.3, 0.7, 0.9);
+            const shoulders = new THREE.Mesh(shoulderGeo, coatMat);
+            shoulders.position.y = 3.3;
+            shoulders.castShadow = true;
+            group.add(shoulders);
+
+            const neckGeo = new THREE.CylinderGeometry(0.26, 0.31, 0.55, 8);
+            const neck = new THREE.Mesh(neckGeo, skinMat);
+            neck.position.y = 3.8;
+            group.add(neck);
+
+            const headGeo = new THREE.SphereGeometry(0.58, 22, 22);
+            const head = new THREE.Mesh(headGeo, skinMat);
+            head.position.y = 4.3;
+            head.castShadow = true;
+            group.add(head);
+
+            const eyeMat = new THREE.MeshStandardMaterial({ color: 0x1a3a4a, emissive: 0x0a1a2a, emissiveIntensity: 0.6 });
+            const eyeGeo = new THREE.SphereGeometry(0.09, 10, 10);
+            
+            const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+            leftEye.position.set(-0.19, 4.35, 0.48);
+            group.add(leftEye);
+            
+            const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+            rightEye.position.set(0.19, 4.35, 0.48);
+            group.add(rightEye);
+
+            const hatMat = new THREE.MeshStandardMaterial({ color: 0x3a3a2a, roughness: 0.75 });
+            const hatBaseGeo = new THREE.CylinderGeometry(0.62, 0.62, 0.35, 10);
+            const hatBase = new THREE.Mesh(hatBaseGeo, hatMat);
+            hatBase.position.y = 4.7;
+            group.add(hatBase);
+
+            const hatTopGeo = new THREE.SphereGeometry(0.62, 10, 10, 0, Math.PI * 2, 0, Math.PI / 2);
+            const hatTop = new THREE.Mesh(hatTopGeo, hatMat);
+            hatTop.position.y = 4.88;
+            hatTop.castShadow = true;
+            group.add(hatTop);
+
+            const scarfMat = new THREE.MeshStandardMaterial({ color: 0x2a4a6a, roughness: 0.6 });
+            const scarfGeo = new THREE.TorusGeometry(0.36, 0.13, 9, 14, Math.PI * 1.6);
+            const scarf = new THREE.Mesh(scarfGeo, scarfMat);
+            scarf.position.y = 3.55;
+            scarf.rotation.x = Math.PI / 2;
+            group.add(scarf);
+
+            const pipeMat = new THREE.MeshStandardMaterial({ color: 0x4a3020, roughness: 0.5, metalness: 0.2 });
+            const pipeGeo = new THREE.CylinderGeometry(0.065, 0.085, 1.3, 9);
+            const pipe = new THREE.Mesh(pipeGeo, pipeMat);
+            pipe.position.set(0.42, 3.95, 0.42);
+            pipe.rotation.z = Math.PI / 3;
+            pipe.rotation.y = -Math.PI / 6;
+            group.add(pipe);
+
+            return group;
+        }
+
+        function createHelenCharacter() {
+            const group = new THREE.Group();
+            const dressMat = new THREE.MeshStandardMaterial({ color: 0x3a2a4a, roughness: 0.6 });
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xf4d4b4, roughness: 0.5 });
+
+            const dressGeo = new THREE.CylinderGeometry(0.6, 1.3, 4, 12);
+            const dress = new THREE.Mesh(dressGeo, dressMat);
+            dress.position.y = 1.5;
+            dress.castShadow = true;
+            group.add(dress);
+
+            const torsoGeo = new THREE.BoxGeometry(1.2, 1.2, 0.6);
+            const torso = new THREE.Mesh(torsoGeo, dressMat);
+            torso.position.y = 3.2;
+            torso.castShadow = true;
+            group.add(torso);
+
+            const neckGeo = new THREE.CylinderGeometry(0.22, 0.25, 0.45, 8);
+            const neck = new THREE.Mesh(neckGeo, skinMat);
+            neck.position.y = 3.9;
+            group.add(neck);
+
+            const headGeo = new THREE.SphereGeometry(0.5, 20, 20);
+            const head = new THREE.Mesh(headGeo, skinMat);
+            head.position.y = 4.35;
+            head.castShadow = true;
+            group.add(head);
+
+            const hairMat = new THREE.MeshStandardMaterial({ color: 0x2a1a0a, roughness: 0.7 });
+            const hairGeo = new THREE.SphereGeometry(0.52, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.6);
+            const hair = new THREE.Mesh(hairGeo, hairMat);
+            hair.position.y = 4.5;
+            group.add(hair);
+
+            return group;
+        }
+
+        function createRoylottCharacter() {
+            const group = new THREE.Group();
+            const coatMat = new THREE.MeshStandardMaterial({ color: 0x2a2a1a, roughness: 0.7 });
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xc4a484, roughness: 0.6 });
+
+            const bodyGeo = new THREE.CylinderGeometry(0.85, 1.2, 4.5, 12);
+            const body = new THREE.Mesh(bodyGeo, coatMat);
+            body.position.y = 1.7;
+            body.castShadow = true;
+            group.add(body);
+
+            const shoulderGeo = new THREE.BoxGeometry(2.6, 0.8, 1);
+            const shoulders = new THREE.Mesh(shoulderGeo, coatMat);
+            shoulders.position.y = 3.5;
+            shoulders.castShadow = true;
+            group.add(shoulders);
+
+            const neckGeo = new THREE.CylinderGeometry(0.3, 0.35, 0.5, 8);
+            const neck = new THREE.Mesh(neckGeo, skinMat);
+            neck.position.y = 4;
+            group.add(neck);
+
+            const headGeo = new THREE.SphereGeometry(0.62, 20, 20);
+            const head = new THREE.Mesh(headGeo, skinMat);
+            head.position.y = 4.5;
+            head.castShadow = true;
+            group.add(head);
+
+            const beardMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, roughness: 0.8 });
+            const beardGeo = new THREE.SphereGeometry(0.35, 12, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
+            const beard = new THREE.Mesh(beardGeo, beardMat);
+            beard.position.set(0, 4.2, 0.3);
+            group.add(beard);
+
+            return group;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            [...fogParticles, ...dustParticles].forEach(particleSystem => {
+                const positions = particleSystem.mesh.geometry.attributes.position.array;
+                particleSystem.velocities.forEach((vel, i) => {
+                    const index = i * 3;
+                    positions[index] += vel.x;
+                    positions[index + 1] += vel.y;
+                    positions[index + 2] += vel.z;
+
+                    if (positions[index + 1] > 20) positions[index + 1] = -4;
+                    if (positions[index + 1] < -4) positions[index + 1] = 20;
+                    if (Math.abs(positions[index]) > 30) positions[index] *= -1;
+                    if (Math.abs(positions[index + 2]) > 30) positions[index + 2] *= -1;
+                });
+                particleSystem.mesh.geometry.attributes.position.needsUpdate = true;
+            });
+
+            const time = Date.now() * 0.001;
+            
+            if (sherlockModel) {
+                sherlockModel.position.y = Math.sin(time * 1.2) * 0.05;
+                sherlockModel.rotation.y = Math.sin(time * 0.3) * 0.02;
+            }
+            
+            if (helenModel) {
+                helenModel.position.y = Math.sin(time * 1.4) * 0.04;
+            }
+            
+            if (roylottModel) {
+                roylottModel.position.y = Math.sin(time * 1.0) * 0.06;
+            }
+
+            if (window.candleLights && storyPhase === 'investigation') {
+                window.candleLights.forEach(light => {
+                    light.intensity = 0.6 + Math.random() * 0.5;
+                });
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onMouseMove(event) {
+            const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            gsap.to(camera.position, {
+                x: mouseX * 3,
+                y: mouseY * 2 + 3.5,
+                duration: 2.5,
+                ease: 'power2.out'
+            });
+        }
+
+        function simulateLoading() {
+            const progress = document.getElementById('loading-progress');
+            let loadValue = 0;
+
+            const loadInterval = setInterval(() => {
+                loadValue += Math.random() * 18;
+                if (loadValue >= 100) {
+                    loadValue = 100;
+                    clearInterval(loadInterval);
+                    
+                    setTimeout(() => {
+                        document.getElementById('loading').classList.add('hidden');
+                        showLandingScene();
+                    }, 600);
+                }
+                progress.style.width = loadValue + '%';
+            }, 180);
+        }
+
+        function showLandingScene() {
+            const landingScene = document.getElementById('landing-scene');
+            landingScene.classList.add('visible');
+
+            gsap.to('.landing-title', {
+                opacity: 1,
+                y: 0,
+                duration: 2,
+                delay: 0.6,
+                ease: 'power2.out'
+            });
+
+            gsap.to('.stories-grid', {
+                opacity: 1,
+                y: 0,
+                duration: 2,
+                delay: 1.2,
+                ease: 'power2.out'
+            });
+        }
+
+        function setupLandingInteractions() {
+            const storyCards = document.querySelectorAll('.story-card');
+            
+            storyCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    const storyId = card.dataset.story;
+                    selectedStory = STORIES[storyId];
+                    beginMemoryTransition();
+                });
+            });
+        }
+
+        function setupAudioToggle() {
+            const toggle = document.getElementById('audio-toggle');
+            toggle.addEventListener('click', () => {
+                audioEnabled = !audioEnabled;
+                toggle.classList.toggle('muted');
+            });
+        }
+
+        function beginMemoryTransition() {
+            gsap.to(sherlockModel.rotation, { y: Math.PI / 5, duration: 1.5, ease: 'power2.inOut' });
+            gsap.to(scene.fog, { density: 0.18, duration: 3 });
+            gsap.to('#landing-scene', {
+                opacity: 0,
+                duration: 2,
+                ease: 'power2.inOut',
+                onComplete: () => {
+                    document.getElementById('landing-scene').style.display = 'none';
+                    startStory();
+                }
+            });
+            gsap.to(camera.position, { z: 10, y: 4, duration: 3.5, ease: 'power2.inOut' });
+        }
+
+        function startStory() {
+            storyPhase = 'investigation';
+            const storyContainer = document.getElementById('story-container');
+            storyContainer.classList.add('visible');
+
+            // Show skip button
+            document.getElementById('skip-button').classList.add('visible');
+
+            addCharacterMarkers();
+
+            // Clear any existing timeouts
+            dialogueTimeouts.forEach(timeout => clearTimeout(timeout));
+            dialogueTimeouts = [];
+
+            selectedStory.dialogue.forEach(dialogue => {
+                const timeout = setTimeout(() => {
+                    showSubtitle(dialogue.speaker, dialogue.text, dialogue.type);
+                }, dialogue.delay);
+                dialogueTimeouts.push(timeout);
+            });
+
+            const questionTimeout = setTimeout(() => {
+                showQuestion();
+            }, selectedStory.dialogue[selectedStory.dialogue.length - 1].delay + 5000);
+            dialogueTimeouts.push(questionTimeout);
+        }
+
+        function skipToQuestion() {
+            // Clear all dialogue timeouts
+            dialogueTimeouts.forEach(timeout => clearTimeout(timeout));
+            dialogueTimeouts = [];
+            
+            // Clear subtitles
+            document.getElementById('subtitle-container').innerHTML = '';
+            
+            // Hide skip button
+            document.getElementById('skip-button').classList.remove('visible');
+            
+            // Show question immediately
+            showQuestion();
+        }
+
+        function addCharacterMarkers() {
+            const helenMarker = document.createElement('div');
+            helenMarker.className = 'character-marker';
+            helenMarker.style.left = '25%';
+            helenMarker.style.top = '45%';
+            helenMarker.innerHTML = '<div class="character-label">HELEN</div>';
+            helenMarker.onclick = () => speakCharacter('helen');
+            document.getElementById('story-container').appendChild(helenMarker);
+
+            const sherlockMarker = document.createElement('div');
+            sherlockMarker.className = 'character-marker active';
+            sherlockMarker.style.right = '28%';
+            sherlockMarker.style.top = '42%';
+            sherlockMarker.innerHTML = '<div class="character-label">SHERLOCK</div>';
+            sherlockMarker.onclick = () => speakCharacter('sherlock');
+            document.getElementById('story-container').appendChild(sherlockMarker);
+        }
+
+        function speakCharacter(character) {
+            if (character === 'sherlock') {
+                gsap.to(camera.position, { x: 1.5, z: 12, duration: 1.8, ease: 'power2.inOut' });
+            } else if (character === 'helen') {
+                gsap.to(camera.position, { x: -1.5, z: 12, duration: 1.8, ease: 'power2.inOut' });
+            }
+        }
+
+        function showSubtitle(speaker, text, type) {
+            const container = document.getElementById('subtitle-container');
+            const subtitle = document.createElement('div');
+            subtitle.className = `subtitle ${type}`;
+            
+            if (type !== 'narration') {
+                subtitle.innerHTML = `<span class="speaker-name">${speaker}</span>${text}`;
+            } else {
+                subtitle.textContent = text;
+            }
+            
+            container.appendChild(subtitle);
+
+            // Show Sherlock portrait when he speaks
+            if (type === 'sherlock') {
+                const portrait = document.getElementById('sherlock-portrait');
+                portrait.classList.add('active');
+                
+                setTimeout(() => {
+                    portrait.classList.remove('active');
+                }, 4500);
+            }
+
+            setTimeout(() => subtitle.classList.add('active'), 100);
+
+            setTimeout(() => {
+                gsap.to(subtitle, {
+                    opacity: 0,
+                    duration: 0.8,
+                    ease: 'power2.out',
+                    onComplete: () => subtitle.remove()
+                });
+            }, 4500);
+        }
+
+        function showQuestion() {
+            document.querySelector('.scroll-hint').style.display = 'none';
+            document.getElementById('skip-button').classList.remove('visible');
+            
+            // Populate suspects
+            const suspectsGrid = document.getElementById('suspects-grid');
+            suspectsGrid.innerHTML = '';
+            
+            selectedStory.suspects.forEach(suspect => {
+                const card = document.createElement('div');
+                card.className = 'suspect-card';
+                card.dataset.suspect = suspect.id;
+                card.innerHTML = `
+                    <div class="suspect-name">${suspect.name}</div>
+                    <div class="suspect-detail">${suspect.detail}</div>
+                `;
+                card.addEventListener('click', () => revealAnswer(suspect.id));
+                suspectsGrid.appendChild(card);
+            });
+
+            document.getElementById('question-scene').classList.add('visible');
+            storyPhase = 'quiz';
+        }
+
+        function revealAnswer(suspect) {
+            document.getElementById('question-scene').classList.remove('visible');
+            storyPhase = 'reveal';
+            
+            setTimeout(() => {
+                const revealScene = document.getElementById('reveal-scene');
+                const message = document.getElementById('reveal-message');
+                const explanation = document.getElementById('reveal-explanation');
+
+                if (suspect === selectedStory.solution) {
+                    message.textContent = selectedStory.correctMessage;
+                    explanation.innerHTML = selectedStory.correctExplanation;
+                } else {
+                    message.textContent = selectedStory.incorrectMessage;
+                    explanation.innerHTML = selectedStory.incorrectExplanation;
+                }
+
+                revealScene.classList.add('visible');
+
+                gsap.to(camera.position, {
+                    x: 0,
+                    z: 15,
+                    y: 3.5,
+                    duration: 2.5,
+                    ease: 'power2.inOut'
+                });
+            }, 600);
+        }
+
+        function restartExperience() {
+            location.reload();
+        }
+    </script>
+</body>
+</html>
