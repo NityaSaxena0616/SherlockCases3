@@ -1,1452 +1,2664 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sherlock Holmes: Interactive Cases - Enhanced Edition</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Garamond', 'Georgia', serif;
-            background: #000;
-            color: #e8e8e8;
-            overflow-x: hidden;
-            cursor: default;
-        }
-
-        /* Film grain - optimized */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100vh;
-            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxwYXRoIGQ9Ik0wIDBoMzAwdjMwMEgweiIgZmlsdGVyPSJ1cmwoI2EpIiBvcGFjaXR5PSIuMDUiLz48L3N2Zz4=');
-            opacity: 0.04;
-            pointer-events: none;
-            z-index: 9999;
-            animation: grain 8s steps(10) infinite;
-            will-change: transform;
-        }
-
-        @keyframes grain {
-            0%, 100% { transform: translate(0, 0); }
-            10% { transform: translate(-5%, -10%); }
-            30% { transform: translate(3%, -15%); }
-            50% { transform: translate(12%, 9%); }
-            70% { transform: translate(-9%, 4%); }
-            90% { transform: translate(-1%, -7%); }
-        }
-
-        /* Loading - smoother */
-        #loading {
-            position: fixed;
-            width: 100%;
-            height: 100vh;
-            background: #000;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            transition: opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        #loading.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .loading-text {
-            font-size: 1.2em;
-            color: #d4af37;
-            letter-spacing: 4px;
-            margin-bottom: 25px;
-            animation: loading-pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes loading-pulse {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
-        }
-
-        .loading-bar {
-            width: 350px;
-            height: 3px;
-            background: rgba(212, 175, 55, 0.2);
-            position: relative;
-            overflow: hidden;
-            border-radius: 2px;
-        }
-
-        .loading-progress {
-            position: absolute;
-            left: 0;
-            top: 0;
-            height: 100%;
-            background: linear-gradient(90deg, #d4af37, #f4e4a6, #d4af37);
-            width: 0%;
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.6);
-        }
-
-        /* Canvas */
-        #canvas-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100vh;
-            z-index: 1;
-        }
-
-        /* Atmospheric layers - optimized */
-        .fog-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100vh;
-            pointer-events: none;
-            z-index: 2;
-            background: radial-gradient(ellipse at 50% 40%, transparent 20%, rgba(0, 0, 0, 0.4) 100%);
-        }
-
-        .light-rays {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100vh;
-            pointer-events: none;
-            z-index: 3;
-            opacity: 0.12;
-            background: 
-                linear-gradient(120deg, transparent 0%, rgba(212, 175, 55, 0.05) 50%, transparent 100%),
-                linear-gradient(240deg, transparent 0%, rgba(212, 175, 55, 0.03) 50%, transparent 100%);
-            animation: light-shift 12s ease-in-out infinite;
-            will-change: opacity, transform;
-        }
-
-        @keyframes light-shift {
-            0%, 100% { opacity: 0.08; transform: rotate(0deg); }
-            50% { opacity: 0.15; transform: rotate(2deg); }
-        }
-
-        /* Audio control */
-        .audio-toggle {
-            position: fixed;
-            top: 25px;
-            right: 25px;
-            z-index: 1000;
-            width: 55px;
-            height: 55px;
-            background: rgba(15, 15, 15, 0.85);
-            border: 1px solid rgba(212, 175, 55, 0.4);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: blur(12px);
-        }
-
-        .audio-toggle:hover {
-            border-color: #d4af37;
-            box-shadow: 0 0 25px rgba(212, 175, 55, 0.4);
-            transform: scale(1.05);
-        }
-
-        .audio-toggle::before {
-            content: '🔊';
-            font-size: 1.3em;
-        }
-
-        .audio-toggle.muted::before {
-            content: '🔇';
-            opacity: 0.6;
-        }
-
-        /* Skip button */
-        .skip-button {
-            position: fixed;
-            bottom: 35px;
-            right: 35px;
-            z-index: 200;
-            padding: 12px 35px;
-            background: rgba(15, 15, 15, 0.9);
-            border: 2px solid rgba(212, 175, 55, 0.5);
-            color: #d4af37;
-            font-size: 1em;
-            letter-spacing: 2px;
-            cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            font-family: 'Garamond', 'Georgia', serif;
-            backdrop-filter: blur(12px);
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .skip-button.visible {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        .skip-button:hover {
-            background: rgba(212, 175, 55, 0.15);
-            border-color: #d4af37;
-            transform: scale(1.05);
-            box-shadow: 0 0 25px rgba(212, 175, 55, 0.4);
-        }
-
-        /* Sherlock portrait when speaking */
-        .sherlock-portrait {
-            position: fixed;
-            bottom: 140px;
-            left: 50px;
-            width: 200px;
-            height: 240px;
-            border: 3px solid #d4af37;
-            border-radius: 8px;
-            overflow: hidden;
-            opacity: 0;
-            transform: translateX(-120px);
-            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 150;
-            box-shadow: 0 10px 40px rgba(212, 175, 55, 0.5);
-            pointer-events: none;
-            background: #000;
-        }
-
-        .sherlock-portrait.active {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        .sherlock-portrait img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center top;
-        }
-
-        /* Cinematic subtitles - enhanced */
-        .subtitle-container {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 92%;
-            max-width: 1100px;
-            text-align: center;
-            z-index: 100;
-            pointer-events: none;
-        }
-
-        .subtitle {
-            display: inline-block;
-            padding: 18px 50px;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.75));
-            font-size: 1.35em;
-            line-height: 1.7;
-            letter-spacing: 0.8px;
-            margin-bottom: 8px;
-            opacity: 0;
-            transform: translateY(25px);
-            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 4px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            will-change: opacity, transform;
-        }
-
-        .subtitle.active {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .subtitle.sherlock {
-            color: #d4af37;
-            font-style: italic;
-            border-left: 3px solid #d4af37;
-        }
-
-        .subtitle.character {
-            color: #e8e8e8;
-        }
-
-        .subtitle.narration {
-            color: #b8b8c8;
-            font-size: 1.15em;
-        }
-
-        .speaker-name {
-            display: block;
-            font-size: 0.7em;
-            color: #999;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-        }
-
-        /* Landing - improved */
-        #landing-scene {
-            position: fixed;
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 10;
-            opacity: 0;
-            transition: opacity 2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        #landing-scene.visible {
-            opacity: 1;
-        }
-
-        .landing-title {
-            font-size: 2.2em;
-            color: #d4af37;
-            letter-spacing: 5px;
-            margin-bottom: 60px;
-            opacity: 0;
-            transform: translateY(30px);
-            text-align: center;
-            padding: 0 30px;
-            text-shadow: 0 2px 15px rgba(212, 175, 55, 0.4);
-        }
-
-        .stories-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-            max-width: 1200px;
-            width: 90%;
-            opacity: 0;
-            transform: translateY(30px);
-        }
-
-        .story-card {
-            padding: 35px 30px;
-            background: rgba(15, 15, 15, 0.92);
-            border: 2px solid rgba(212, 175, 55, 0.35);
-            cursor: pointer;
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            text-align: center;
-            backdrop-filter: blur(15px);
-            border-radius: 4px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .story-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.12), transparent);
-            transition: left 0.7s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .story-card:hover::before {
-            left: 100%;
-        }
-
-        .story-card:hover {
-            border-color: #d4af37;
-            box-shadow: 0 8px 35px rgba(212, 175, 55, 0.4);
-            transform: translateY(-8px);
-            background: rgba(212, 175, 55, 0.08);
-        }
-
-        .story-title {
-            font-size: 1.5em;
-            color: #e8e8e8;
-            letter-spacing: 2px;
-            margin-bottom: 15px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .story-description {
-            font-size: 1em;
-            color: #a8a8a8;
-            line-height: 1.6;
-            letter-spacing: 0.5px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .story-year {
-            font-size: 0.85em;
-            color: #d4af37;
-            margin-top: 15px;
-            font-style: italic;
-            position: relative;
-            z-index: 1;
-        }
-
-        /* Interactive character markers - enhanced */
-        .character-marker {
-            position: absolute;
-            width: 90px;
-            height: 90px;
-            border: 3px solid rgba(212, 175, 55, 0.5);
-            border-radius: 50%;
-            cursor: pointer;
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 50;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: radial-gradient(circle, rgba(212, 175, 55, 0.15), transparent 70%);
-            backdrop-filter: blur(3px);
-            will-change: transform;
-        }
-
-        .character-marker:hover {
-            border-color: #d4af37;
-            transform: scale(1.12);
-            box-shadow: 0 0 35px rgba(212, 175, 55, 0.5);
-            background: radial-gradient(circle, rgba(212, 175, 55, 0.25), transparent 70%);
-        }
-
-        .character-marker.active {
-            border-color: #d4af37;
-            box-shadow: 0 0 45px rgba(212, 175, 55, 0.7);
-            animation: pulse-marker 2.5s ease-in-out infinite;
-        }
-
-        @keyframes pulse-marker {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.08); }
-        }
-
-        .character-label {
-            position: absolute;
-            bottom: -35px;
-            font-size: 0.9em;
-            color: #d4af37;
-            white-space: nowrap;
-            letter-spacing: 2px;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
-        }
-
-        /* Story container */
-        #story-container {
-            position: fixed;
-            width: 100%;
-            height: 100vh;
-            z-index: 5;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        #story-container.visible {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        .scroll-hint {
-            position: fixed;
-            bottom: 35px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: rgba(212, 175, 55, 0.7);
-            font-size: 0.95em;
-            letter-spacing: 3px;
-            z-index: 15;
-            animation: hint-pulse 3s ease-in-out infinite;
-        }
-
-        @keyframes hint-pulse {
-            0%, 100% { opacity: 0.5; transform: translate(-50%, 0); }
-            50% { opacity: 1; transform: translate(-50%, -5px); }
-        }
-
-        /* Question scene - enhanced */
-        #question-scene {
-            position: fixed;
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 20;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-            background: rgba(0, 0, 0, 0.88);
-            backdrop-filter: blur(20px);
-        }
-
-        #question-scene.visible {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        .question-title {
-            font-size: 2.2em;
-            color: #d4af37;
-            letter-spacing: 4px;
-            margin-bottom: 70px;
-            text-align: center;
-            padding: 0 30px;
-            text-shadow: 0 3px 20px rgba(212, 175, 55, 0.4);
-        }
-
-        .suspects-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 30px;
-            max-width: 1000px;
-            padding: 0 30px;
-        }
-
-        .suspect-card {
-            padding: 35px 30px;
-            background: rgba(15, 15, 15, 0.95);
-            border: 3px solid rgba(212, 175, 55, 0.4);
-            cursor: pointer;
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            text-align: center;
-            backdrop-filter: blur(15px);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .suspect-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.1), transparent);
-            transition: left 0.6s ease;
-        }
-
-        .suspect-card:hover::before {
-            left: 100%;
-        }
-
-        .suspect-card:hover {
-            transform: translateY(-8px);
-            border-color: #d4af37;
-            box-shadow: 0 15px 40px rgba(212, 175, 55, 0.3);
-            background: rgba(212, 175, 55, 0.08);
-        }
-
-        .suspect-name {
-            font-size: 1.4em;
-            color: #e8e8e8;
-            letter-spacing: 2.5px;
-            margin-bottom: 12px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .suspect-detail {
-            font-size: 1em;
-            color: #a8a8a8;
-            font-style: italic;
-            letter-spacing: 1px;
-            position: relative;
-            z-index: 1;
-        }
-
-        /* Reveal scene - enhanced */
-        #reveal-scene {
-            position: fixed;
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 25;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-            background: rgba(0, 0, 0, 0.96);
-            backdrop-filter: blur(25px);
-        }
-
-        #reveal-scene.visible {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        .reveal-message {
-            font-size: 2.8em;
-            color: #d4af37;
-            letter-spacing: 5px;
-            margin-bottom: 50px;
-            text-align: center;
-            padding: 0 30px;
-            text-shadow: 0 4px 25px rgba(212, 175, 55, 0.5);
-            animation: reveal-fade-in 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
-
-        @keyframes reveal-fade-in {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        .reveal-explanation {
-            max-width: 900px;
-            padding: 35px 50px;
-            background: rgba(15, 15, 15, 0.85);
-            border-left: 4px solid #d4af37;
-            font-size: 1.2em;
-            line-height: 2;
-            margin-bottom: 50px;
-            text-align: center;
-            backdrop-filter: blur(15px);
-            border-radius: 4px;
-            animation: reveal-fade-in 1s cubic-bezier(0.4, 0, 0.2, 1) 0.3s forwards;
-            opacity: 0;
-        }
-
-        .clue-highlight {
-            color: #d4af37;
-            font-weight: bold;
-            text-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
-        }
-
-        .restart-button {
-            padding: 18px 60px;
-            background: transparent;
-            border: 3px solid #d4af37;
-            color: #d4af37;
-            font-size: 1.15em;
-            letter-spacing: 3px;
-            cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            font-family: 'Garamond', 'Georgia', serif;
-            animation: reveal-fade-in 1s cubic-bezier(0.4, 0, 0.2, 1) 0.6s forwards;
-            opacity: 0;
-        }
-
-        .restart-button:hover {
-            background: rgba(212, 175, 55, 0.15);
-            transform: scale(1.08);
-            box-shadow: 0 0 30px rgba(212, 175, 55, 0.4);
-        }
-
-        @media (max-width: 768px) {
-            .landing-title { font-size: 1.5em; letter-spacing: 3px; }
-            .subtitle { font-size: 1.1em; padding: 15px 35px; }
-            .question-title { font-size: 1.7em; }
-            .suspects-grid { grid-template-columns: 1fr; }
-            .reveal-message { font-size: 2em; }
-            .stories-grid { grid-template-columns: 1fr; }
-            .sherlock-portrait { width: 120px; height: 150px; left: 20px; bottom: 120px; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sherlock Holmes — The Mind Palace</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Josefin+Sans:wght@100;300;400;600&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════
+   FOUNDATION
+═══════════════════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --gold:#d4af37;--gold2:rgba(212,175,55,.25);--gold3:rgba(212,175,55,.08);
+  --dark:#04040c;--ink:#e8e8e8;--fog:#a8a8b8;
+  --red:#cc2222;--blue:#4477cc;
+  --glass-bg:rgba(4,4,14,.88);
+  --glass-border:rgba(212,175,55,.18);
+  --ease:cubic-bezier(.25,.46,.45,.94);
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--dark)}
+body{font-family:'Playfair Display',Georgia,serif;color:var(--ink);cursor:none}
+
+/* custom cursor */
+#cursor{position:fixed;width:10px;height:10px;border-radius:50%;background:var(--gold);pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:width .2s,height .2s,opacity .2s;mix-blend-mode:difference}
+#cursor-ring{position:fixed;width:36px;height:36px;border-radius:50%;border:1px solid rgba(212,175,55,.5);pointer-events:none;z-index:99998;transform:translate(-50%,-50%);transition:transform .12s var(--ease),width .3s,height .3s,opacity .3s}
+body:hover #cursor{opacity:1}
+.hoverable:hover~#cursor,#cursor.hover{width:20px;height:20px}
+
+/* grain overlay */
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.8' stitchTiles='stitch' type='fractalNoise'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");opacity:.045;pointer-events:none;z-index:9997;animation:grain 12s steps(8) infinite}
+@keyframes grain{0%,100%{transform:translate(0,0)}25%{transform:translate(-3%,-8%)}50%{transform:translate(4%,-12%)}75%{transform:translate(-6%,5%)}90%{transform:translate(2%,-4%)}}
+
+/* ═══════════════════════════════════════════════
+   LOADING SCREEN
+═══════════════════════════════════════════════ */
+#loading{position:fixed;inset:0;background:#000;z-index:10000;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:opacity 1.2s var(--ease)}
+#loading.fade{opacity:0;pointer-events:none}
+.load-eye{width:80px;height:80px;position:relative;margin-bottom:40px}
+.load-eye svg{animation:eyeblink 3s ease infinite}
+@keyframes eyeblink{0%,90%,100%{transform:scaleY(1)}95%{transform:scaleY(.05)}}
+.load-label{font-family:'Josefin Sans',sans-serif;font-size:.72em;color:var(--gold);letter-spacing:8px;margin-bottom:28px;animation:pulse 2s ease infinite}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+.load-bar{width:240px;height:1px;background:rgba(212,175,55,.12);overflow:hidden}
+.load-fill{height:100%;background:var(--gold);width:0;transition:width .3s var(--ease);box-shadow:0 0 16px rgba(212,175,55,.7)}
+.load-quote{position:absolute;bottom:48px;font-style:italic;font-size:1em;color:rgba(212,175,55,.38);max-width:500px;text-align:center;padding:0 32px;line-height:1.7}
+
+/* ═══════════════════════════════════════════════
+   THREE.JS CANVAS
+═══════════════════════════════════════════════ */
+#three-canvas{position:fixed;inset:0;z-index:1;display:none}
+#vignette{position:fixed;inset:0;z-index:2;background:radial-gradient(ellipse at 50% 45%,transparent 25%,rgba(4,4,12,.7) 100%);pointer-events:none}
+
+/* ═══════════════════════════════════════════════
+   DEDUCTION MODE OVERLAY
+═══════════════════════════════════════════════ */
+#deduction-overlay{position:fixed;inset:0;z-index:50;pointer-events:none;opacity:0;transition:opacity 1s var(--ease)}
+#deduction-overlay.active{opacity:1}
+#deduction-overlay::before{
+  content:'DEDUCTION MODE';position:absolute;
+  top:20px;left:50%;transform:translateX(-50%);
+  font-family:'Josefin Sans',sans-serif;font-size:.68em;
+  color:var(--gold);letter-spacing:8px;
+  background:rgba(4,4,14,.9);
+  border:1px solid rgba(212,175,55,.3);
+  padding:6px 22px 7px;
+  animation:dedpulse 2s ease infinite
+}
+@keyframes dedpulse{0%,100%{opacity:.4}50%{opacity:1}}
+#ded-canvas{position:absolute;inset:0;width:100%;height:100%}
+#three-canvas{filter:none;transition:filter 1s ease}
+#three-canvas.deduction{filter:saturate(0.15) brightness(0.7)}
+
+/* ═══════════════════════════════════════════════
+   SHERLOCK SPEECH BUBBLE
+═══════════════════════════════════════════════ */
+#sherlock-speech{
+  position:fixed;bottom:88px;left:50%;transform:translateX(-50%);
+  max-width:600px;width:90%;z-index:500;pointer-events:none;
+  opacity:0;transition:opacity .6s var(--ease)
+}
+#sherlock-speech.show{opacity:1}
+.speech-inner{
+  background:rgba(4,4,10,.97);border:1px solid var(--gold2);
+  padding:20px 28px;position:relative;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  box-shadow:0 8px 40px rgba(0,0,0,.75),0 0 0 1px rgba(212,175,55,.06) inset;
+}
+.speech-inner::before{
+  content:'SH';position:absolute;top:-1px;left:24px;
+  font-family:'Josefin Sans',sans-serif;font-size:.58em;color:var(--gold);
+  letter-spacing:3px;background:rgba(4,4,10,.97);padding:0 6px;transform:translateY(-50%)
+}
+.speech-text{font-style:italic;font-size:1.05em;color:#e0e0d0;line-height:1.75}
+.speech-attr{font-family:'Josefin Sans',sans-serif;font-size:.62em;color:rgba(212,175,55,.45);letter-spacing:3px;margin-top:10px}
+
+/* ═══════════════════════════════════════════════
+   SCREEN SYSTEM
+═══════════════════════════════════════════════ */
+.screen{position:fixed;inset:0;z-index:100;display:none;flex-direction:column;justify-content:center;align-items:center}
+.screen.show{display:flex}
+
+/* ═══════════════════════════════════════════════
+   SCREEN: MIND PALACE HUB
+═══════════════════════════════════════════════ */
+#s-hub{z-index:150;pointer-events:none}
+#hub-title{
+  position:fixed;top:16px;left:50%;transform:translateX(-50%);
+  text-align:center;pointer-events:none;opacity:0;transition:opacity 1s;
+  background:rgba(4,4,14,.8);
+  border-bottom:1px solid rgba(212,175,55,.12);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  padding:12px 40px 14px;min-width:280px;
+}
+#hub-title.show{opacity:1}
+.hub-eyebrow{font-family:'Josefin Sans',sans-serif;font-size:.6em;color:rgba(212,175,55,.5);letter-spacing:6px;margin-bottom:8px;transition:all .4s}
+.hub-name{font-size:1.65em;color:rgba(232,232,220,.9);letter-spacing:2px}
+.hub-case-name{font-family:'Josefin Sans',sans-serif;font-size:.6em;color:rgba(212,175,55,.38);letter-spacing:4px;margin-top:8px;min-height:1em;transition:opacity .5s}
+#hub-to-entry{
+  position:fixed;top:20px;left:20px;z-index:300;
+  font-family:'Josefin Sans',sans-serif;font-size:.62em;
+  color:rgba(212,175,55,.6);letter-spacing:3px;
+  background:rgba(4,4,14,.85);border:1px solid rgba(212,175,55,.18);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  padding:7px 16px;cursor:pointer;pointer-events:all;
+  transition:color .3s,background .3s,border-color .3s;display:none
+}
+#hub-to-entry:hover{color:var(--gold);border-color:rgba(212,175,55,.4)}
+#hub-to-entry.show{display:block}
+
+/* Portal labels — 3D projected, glass card treatment */
+#portal-labels{position:fixed;inset:0;pointer-events:none;z-index:200}
+.portal-label{
+  position:absolute;
+  transform:translate(-50%,-50%);
+  text-align:center;
+  cursor:pointer;pointer-events:all;
+  opacity:0;
+  transition:opacity .5s var(--ease),transform .5s var(--ease);
+  /* Glass card */
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  padding:14px 18px 16px;
+  min-width:96px;
+  box-shadow:0 8px 32px rgba(0,0,0,.65),0 0 0 1px rgba(212,175,55,.05) inset;
+}
+.portal-label.show{opacity:1}
+.portal-label:hover{
+  background:rgba(4,4,18,.95);
+  border-color:rgba(212,175,55,.38);
+  box-shadow:0 12px 40px rgba(0,0,0,.8),0 0 30px rgba(212,175,55,.1);
+}
+.portal-label:hover .pl-ring{transform:scale(1.2);border-color:var(--gold);box-shadow:0 0 20px rgba(212,175,55,.3)}
+.pl-icon{font-size:1.8em;margin-bottom:8px;display:block;filter:drop-shadow(0 0 12px rgba(212,175,55,.5))}
+.pl-name{font-family:'Josefin Sans',sans-serif;font-size:.65em;color:var(--gold);letter-spacing:5px;display:block;text-shadow:0 0 20px rgba(212,175,55,.4)}
+.pl-ring{
+  width:70px;height:70px;border-radius:50%;
+  border:1px solid rgba(212,175,55,.3);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 10px;
+  transition:all .4s var(--ease);
+  background:rgba(4,4,12,.5);
+}
+.pl-sub{
+  font-family:'Josefin Sans',sans-serif;
+  font-size:.52em;color:rgba(212,175,55,.4);
+  letter-spacing:2px;display:block;margin-top:5px;
+  max-width:90px;word-break:break-word;line-height:1.4;
+}
+.portal-label:hover .pl-sub{color:rgba(212,175,55,.7)}
+
+/* ═══════════════════════════════════════════════
+   SCREEN: 221B BAKER STREET
+═══════════════════════════════════════════════ */
+#s-baker{z-index:300;background:rgba(4,4,8,.0);pointer-events:none}
+#baker-room{position:fixed;inset:0;pointer-events:none}
+.room-object{position:absolute;cursor:pointer;pointer-events:all;transition:all .4s var(--ease);opacity:0}
+.room-object.show{opacity:1}
+.room-object:hover .ro-glow{opacity:1;transform:scale(1.1)}
+.room-object:hover .ro-label{opacity:1;transform:translateX(-50%) translateY(0)}
+.ro-glow{position:absolute;inset:-12px;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,.12),transparent 70%);opacity:0;transition:all .5s var(--ease);pointer-events:none}
+.ro-label{
+  position:absolute;bottom:-44px;left:50%;
+  transform:translateX(-50%) translateY(6px);
+  white-space:nowrap;
+  font-family:'Josefin Sans',sans-serif;font-size:.6em;
+  color:var(--gold);letter-spacing:3px;
+  opacity:0;transition:all .35s var(--ease);pointer-events:none;
+  background:rgba(4,4,14,.88);border:1px solid rgba(212,175,55,.2);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  padding:3px 12px 4px;
+}
+#baker-ui{position:fixed;inset:0;z-index:310;pointer-events:none}
+#baker-back{
+  position:fixed;top:20px;left:20px;z-index:320;
+  font-family:'Josefin Sans',sans-serif;font-size:.65em;
+  color:rgba(212,175,55,.6);letter-spacing:3px;
+  background:rgba(4,4,14,.85);border:1px solid rgba(212,175,55,.18);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  padding:7px 16px;cursor:pointer;pointer-events:all;transition:color .3s,border-color .3s
+}
+#baker-back:hover{color:var(--gold);border-color:rgba(212,175,55,.4)}
+#baker-hint{
+  position:fixed;bottom:32px;left:50%;
+  font-family:'Josefin Sans',sans-serif;font-size:.62em;
+  color:rgba(212,175,55,.45);letter-spacing:4px;pointer-events:none;
+  background:rgba(4,4,14,.75);border:1px solid rgba(212,175,55,.12);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  padding:5px 20px 6px;
+  transform:translateX(-50%);
+  animation:float2 4s ease-in-out infinite
+}
+@keyframes float2{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-5px)}}
+
+/* ═══════════════════════════════════════════════
+   SCREEN: EVIDENCE BOARD
+═══════════════════════════════════════════════ */
+#s-evidence{z-index:300;background:rgba(4,2,2,.97);overflow:hidden}
+#evidence-canvas{position:absolute;inset:0;width:100%;height:100%}
+#ev-back{
+  position:fixed;top:20px;left:20px;z-index:320;
+  font-family:'Josefin Sans',sans-serif;font-size:.65em;
+  color:rgba(212,175,55,.6);letter-spacing:3px;
+  background:rgba(4,4,14,.85);border:1px solid rgba(212,175,55,.18);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  padding:7px 16px;cursor:pointer;transition:color .3s,border-color .3s
+}
+#ev-back:hover{color:var(--gold);border-color:rgba(212,175,55,.4)}
+.ev-pin{position:absolute;cursor:pointer;transform:translate(-50%,-50%);transition:all .4s var(--ease)}
+.ev-pin:hover{transform:translate(-50%,-50%) scale(1.1)}
+.ev-card{background:rgba(240,230,200,.96);color:#1a1008;padding:10px 12px;font-family:'Special Elite',serif;font-size:.78em;line-height:1.4;max-width:140px;position:relative;box-shadow:4px 4px 18px rgba(0,0,0,.6);border:1px solid rgba(200,180,140,.5)}
+.ev-card::after{content:'';position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:10px;height:10px;background:var(--red);border-radius:50%;box-shadow:0 0 8px var(--red)}
+.ev-card.selected{box-shadow:0 0 24px rgba(212,175,55,.6),4px 4px 18px rgba(0,0,0,.6)}
+#ev-title{
+  position:fixed;top:0;left:0;right:0;
+  font-family:'Josefin Sans',sans-serif;font-size:.72em;
+  color:var(--gold);letter-spacing:6px;pointer-events:none;
+  text-align:center;padding:14px 0 13px;
+  background:rgba(4,4,14,.92);
+  border-bottom:1px solid rgba(212,175,55,.15);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+
+/* ═══════════════════════════════════════════════
+   SCREEN: SUSPECT RING
+═══════════════════════════════════════════════ */
+#s-suspects{z-index:300;background:rgba(4,4,12,.98)}
+#suspects-canvas{position:absolute;inset:0;width:100%;height:100%}
+#susp-back{
+  position:fixed;top:20px;left:20px;z-index:320;
+  font-family:'Josefin Sans',sans-serif;font-size:.65em;
+  color:rgba(212,175,55,.6);letter-spacing:3px;
+  background:rgba(4,4,14,.85);border:1px solid rgba(212,175,55,.18);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  padding:7px 16px;cursor:pointer;transition:color .3s,border-color .3s
+}
+#susp-back:hover{color:var(--gold);border-color:rgba(212,175,55,.4)}
+#susp-info{position:fixed;right:0;top:0;bottom:0;width:360px;background:rgba(4,4,14,.97);border-left:1px solid var(--gold2);padding:48px 32px;transform:translateX(100%);transition:transform .6s var(--ease);z-index:320;overflow-y:auto}
+#susp-info.show{transform:translateX(0)}
+.si-role{font-family:'Josefin Sans',sans-serif;font-size:.62em;color:var(--gold);letter-spacing:5px;margin-bottom:10px}
+.si-name{font-size:2em;margin-bottom:24px;line-height:1.2}
+.si-portrait{width:100%;height:200px;margin-bottom:24px;overflow:hidden;border:1px solid var(--gold2)}
+.si-bio{font-family:'Josefin Sans',sans-serif;font-size:.82em;color:var(--fog);line-height:1.8;margin-bottom:20px}
+.si-verdict{padding:14px 18px;border:1px solid var(--gold2);font-family:'Josefin Sans',sans-serif;font-size:.75em;color:var(--gold);letter-spacing:1px;line-height:1.6;margin-bottom:20px}
+.si-close{font-family:'Josefin Sans',sans-serif;font-size:.65em;color:rgba(212,175,55,.45);letter-spacing:3px;background:transparent;border:none;cursor:pointer;transition:color .3s;margin-top:8px}
+.si-close:hover{color:var(--gold)}
+#susp-hint{
+  position:fixed;bottom:28px;left:50%;
+  font-family:'Josefin Sans',sans-serif;font-size:.62em;
+  color:rgba(212,175,55,.45);letter-spacing:4px;pointer-events:none;
+  background:rgba(4,4,14,.75);border:1px solid rgba(212,175,55,.12);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  padding:5px 20px 6px;
+  transform:translateX(-50%);
+}
+
+/* ═══════════════════════════════════════════════
+   SCREEN: STORY / CHAPTER MODE
+═══════════════════════════════════════════════ */
+#s-story{z-index:300;background:#000;flex-direction:column;overflow:hidden}
+.chapter{position:absolute;inset:0;display:none;flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:96px}
+.chapter.on{display:flex}
+.ch-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ch-veil{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.97) 0%,rgba(0,0,0,.45) 55%,rgba(0,0,0,.1) 100%)}
+.ch-content{position:relative;z-index:5;max-width:820px;text-align:center;padding:0 40px}
+.ch-num{font-family:'Josefin Sans',sans-serif;font-size:.65em;color:var(--gold);letter-spacing:7px;margin-bottom:14px}
+.ch-title{font-size:2.6em;color:#f0f0f0;margin-bottom:20px;line-height:1.15}
+.ch-text{font-family:'Josefin Sans',sans-serif;font-size:.86em;color:#9a9aaa;line-height:2;max-width:680px;margin:0 auto}
+.ch-hl{color:var(--gold);border-bottom:1px solid rgba(212,175,55,.3)}
+.ch-nav{position:absolute;bottom:24px;right:36px;display:flex;gap:12px;align-items:center;z-index:10}
+.ch-ctr{font-family:'Josefin Sans',sans-serif;font-size:.62em;color:rgba(212,175,55,.4);letter-spacing:3px}
+.btn-wire{font-family:'Josefin Sans',sans-serif;font-size:.7em;color:var(--gold);letter-spacing:4px;background:transparent;border:1px solid rgba(212,175,55,.35);padding:9px 24px;cursor:pointer;transition:all .35s var(--ease)}
+.btn-wire:hover{background:rgba(212,175,55,.1);border-color:var(--gold);box-shadow:0 0 18px rgba(212,175,55,.25)}
+#story-back{
+  position:fixed;top:20px;left:20px;z-index:320;
+  font-family:'Josefin Sans',sans-serif;font-size:.65em;
+  color:rgba(212,175,55,.6);letter-spacing:3px;
+  background:rgba(4,4,14,.85);border:1px solid rgba(212,175,55,.18);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  padding:7px 16px;cursor:pointer;transition:color .3s,border-color .3s
+}
+#story-back:hover{color:var(--gold);border-color:rgba(212,175,55,.4)}
+
+/* ═══════════════════════════════════════════════
+   SCREEN: DEDUCTION QUIZ
+═══════════════════════════════════════════════ */
+#s-deduction{z-index:400;background:rgba(2,2,8,.97)}
+.ded-h{font-size:1.8em;color:var(--gold);letter-spacing:2px;margin-bottom:8px;text-align:center;padding:0 32px}
+.ded-sub{font-family:'Josefin Sans',sans-serif;font-size:.68em;color:#444;letter-spacing:3px;margin-bottom:52px}
+.ded-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:16px;max-width:920px;width:90%}
+.ded-card{padding:26px 20px;background:rgba(6,6,16,.99);border:1px solid rgba(212,175,55,.22);cursor:pointer;transition:all .45s var(--ease);text-align:center;position:relative;overflow:hidden}
+.ded-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent,rgba(212,175,55,.07),transparent);transform:translateX(-100%);transition:transform .6s}
+.ded-card:hover::before{transform:translateX(100%)}
+.ded-card:hover{transform:translateY(-6px);border-color:var(--gold);box-shadow:0 8px 28px rgba(212,175,55,.22)}
+.ded-name{font-size:1.18em;color:#e0e0e0;margin-bottom:8px;letter-spacing:.8px}
+.ded-role{font-family:'Josefin Sans',sans-serif;font-size:.7em;color:#555;letter-spacing:1px}
+#ded-back{
+  position:fixed;top:20px;left:20px;z-index:420;
+  font-family:'Josefin Sans',sans-serif;font-size:.65em;
+  color:rgba(212,175,55,.6);letter-spacing:3px;
+  background:rgba(4,4,14,.85);border:1px solid rgba(212,175,55,.18);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  padding:7px 16px;cursor:pointer;transition:color .3s,border-color .3s
+}
+#ded-back:hover{color:var(--gold);border-color:rgba(212,175,55,.4)}
+
+/* ═══════════════════════════════════════════════
+   SCREEN: FINAL REVEAL
+═══════════════════════════════════════════════ */
+#s-reveal{z-index:400;background:rgba(2,2,8,.98);flex-direction:column;overflow-y:auto;padding:40px 20px}
+.rv-float{position:fixed;font-family:'Josefin Sans',sans-serif;font-size:.62em;color:rgba(212,175,55,.3);letter-spacing:2px;animation:floatp 7s ease-in-out infinite;pointer-events:none}
+@keyframes floatp{0%,100%{transform:translateY(0) rotate(var(--r,0deg))}50%{transform:translateY(-12px) rotate(var(--r,0deg))}}
+.rv-sil{position:relative;z-index:5;margin-bottom:28px;animation:risein 1.2s var(--ease) .2s both}
+.rv-text{position:relative;z-index:5;max-width:740px;text-align:center;animation:risein 1.1s var(--ease) .8s both;padding:0 28px}
+.rv-verdict{font-size:1.8em;color:var(--gold);margin-bottom:18px;letter-spacing:2px}
+.rv-explain{font-family:'Josefin Sans',sans-serif;font-size:.84em;color:var(--fog);line-height:1.95;margin-bottom:24px}
+.rv-closing{font-style:italic;font-size:1.1em;color:#c0c0cc;border-top:1px solid var(--gold2);padding-top:20px;margin-bottom:30px}
+.hl{color:var(--gold);font-weight:700}
+@keyframes risein{from{opacity:0;transform:scale(.96) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
+#rv-back{
+  position:fixed;top:20px;left:20px;z-index:420;
+  font-family:'Josefin Sans',sans-serif;font-size:.65em;
+  color:rgba(212,175,55,.6);letter-spacing:3px;
+  background:rgba(4,4,14,.85);border:1px solid rgba(212,175,55,.18);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  padding:7px 16px;cursor:pointer;transition:color .3s,border-color .3s
+}
+#rv-back:hover{color:var(--gold);border-color:rgba(212,175,55,.4)}
+
+/* ═══════════════════════════════════════════════
+   DEDUCTION MODE BUTTON
+═══════════════════════════════════════════════ */
+#ded-mode-btn{position:fixed;bottom:28px;right:28px;z-index:8000;width:52px;height:52px;border-radius:50%;background:rgba(4,4,14,.95);border:1px solid var(--gold2);display:none;align-items:center;justify-content:center;cursor:pointer;font-size:1.3em;transition:all .4s var(--ease);backdrop-filter:blur(12px)}
+#ded-mode-btn:hover{border-color:var(--gold);box-shadow:0 0 24px rgba(212,175,55,.4);transform:scale(1.1)}
+#ded-mode-btn.on{background:rgba(212,175,55,.18);border-color:var(--gold);box-shadow:0 0 30px rgba(212,175,55,.5)}
+
+/* ═══════════════════════════════════════════════
+   TIMELINE (3D horizontal scroll)
+═══════════════════════════════════════════════ */
+#s-timeline{z-index:300;background:rgba(2,2,10,.98);flex-direction:column;overflow:hidden}
+#tl-back{
+  position:fixed;top:20px;left:20px;z-index:320;
+  font-family:'Josefin Sans',sans-serif;font-size:.65em;
+  color:rgba(212,175,55,.6);letter-spacing:3px;
+  background:rgba(4,4,14,.85);border:1px solid rgba(212,175,55,.18);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  padding:7px 16px;cursor:pointer;transition:color .3s,border-color .3s
+}
+#tl-back:hover{color:var(--gold);border-color:rgba(212,175,55,.4)}
+#tl-title{font-family:'Josefin Sans',sans-serif;font-size:.72em;color:var(--gold);letter-spacing:6px;margin-bottom:58px}
+#tl-track{display:flex;align-items:center;gap:0;overflow-x:auto;width:100%;padding:0 80px 48px;scrollbar-width:none;cursor:grab}
+#tl-track:active{cursor:grabbing}
+#tl-track::-webkit-scrollbar{display:none}
+.tl-line{height:1px;min-width:60px;background:linear-gradient(90deg,transparent,rgba(212,175,55,.3),transparent);flex-shrink:0}
+.tl-card{flex-shrink:0;width:220px;background:rgba(6,6,18,.99);border:1px solid rgba(212,175,55,.2);padding:22px 20px;transition:all .45s var(--ease);cursor:pointer;position:relative}
+.tl-card:hover,.tl-card.active{border-color:var(--gold);box-shadow:0 0 32px rgba(212,175,55,.2);transform:translateY(-8px)}
+.tl-dot{width:10px;height:10px;border-radius:50%;background:var(--gold);position:absolute;bottom:-25px;left:50%;transform:translateX(-50%);box-shadow:0 0 12px rgba(212,175,55,.5)}
+.tl-time{font-family:'Josefin Sans',sans-serif;font-size:.6em;color:var(--gold);letter-spacing:4px;margin-bottom:10px}
+.tl-event{font-size:1em;color:#e0e0e0;margin-bottom:8px;line-height:1.3}
+.tl-detail{font-family:'Josefin Sans',sans-serif;font-size:.72em;color:#606070;line-height:1.6}
+#tl-hint{
+  font-family:'Josefin Sans',sans-serif;font-size:.62em;
+  color:rgba(212,175,55,.45);letter-spacing:4px;
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  pointer-events:none;
+  background:rgba(4,4,14,.75);border:1px solid rgba(212,175,55,.12);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  padding:5px 20px 6px;
+}
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════ */
+@media(max-width:768px){
+  #susp-info{width:100%;top:auto;bottom:0;height:70vh;border-left:none;border-top:1px solid var(--gold2);transform:translateY(100%)}
+  #susp-info.show{transform:translateY(0)}
+  .ded-grid{grid-template-columns:1fr 1fr}
+  .ch-title{font-size:1.8em}
+  #tl-track{padding:0 24px 48px}
+}
+
+/* ═══════════════════════════════════════════════
+   ENTRY HUB — 3D OBJECT INTERACTION LAYER
+═══════════════════════════════════════════════ */
+#entry-canvas{position:fixed;inset:0;z-index:10;pointer-events:all}
+#s-entry{z-index:20;pointer-events:none;background:transparent}
+
+/* Hub object labels — glass card with 3D depth */
+.hub-obj-label{
+  position:fixed;
+  pointer-events:none;
+  text-align:center;
+  z-index:30;
+  opacity:0;
+  transition:opacity .5s var(--ease), transform .5s var(--ease);
+  transform:translateY(12px);
+  /* Glass card */
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  padding:14px 22px 16px;
+  min-width:160px;
+  box-shadow:0 8px 32px rgba(0,0,0,.7),0 0 0 1px rgba(212,175,55,.05) inset;
+  overflow:hidden;
+}
+.hub-obj-label::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(212,175,55,.25),transparent);
+}
+.hub-obj-label.show{opacity:1;transform:translateY(0)}
+.hub-obj-label.hovered .hol-name{color:var(--gold);text-shadow:0 0 28px rgba(212,175,55,.45)}
+.hub-obj-label.hovered .hol-eyebrow{opacity:1;letter-spacing:8px}
+.hub-obj-label.hovered .hol-hint{opacity:.8}
+.hub-obj-label.hovered{
+  border-color:rgba(212,175,55,.32);
+  box-shadow:0 12px 40px rgba(0,0,0,.8),0 0 20px rgba(212,175,55,.08);
+}
+.hol-eyebrow{
+  font-family:'Josefin Sans',sans-serif;
+  font-size:.58em;color:rgba(212,175,55,.6);
+  letter-spacing:6px;margin-bottom:6px;
+  transition:letter-spacing .4s var(--ease), opacity .3s;
+}
+.hol-name{
+  font-size:1.45em;color:#e0ddd5;
+  letter-spacing:2.5px;margin-bottom:5px;
+  transition:color .4s, text-shadow .4s;
+}
+.hol-hint{
+  font-family:'Josefin Sans',sans-serif;
+  font-size:.56em;color:rgba(212,175,55,.35);
+  letter-spacing:3px;
+  transition:opacity .3s;
+}
+.hol-action{
+  font-family:'Josefin Sans',sans-serif;
+  font-size:.56em;color:var(--gold);
+  letter-spacing:4px;margin-top:10px;
+  opacity:0;transform:translateY(4px);
+  transition:opacity .35s var(--ease), transform .35s var(--ease);
+  border:1px solid rgba(212,175,55,.28);
+  padding:5px 14px;display:inline-block;
+  background:rgba(4,4,14,.85);backdrop-filter:blur(8px);
+}
+.hub-obj-label.hovered .hol-action{opacity:1;transform:translateY(0)}
+
+/* Entry title overlay */
+#entry-title{
+  position:fixed;top:0;left:0;right:0;
+  display:flex;flex-direction:column;align-items:center;
+  padding-top:42px;
+  z-index:25;pointer-events:none;
+  opacity:0;transition:opacity 1.2s ease
+}
+#entry-title.show{opacity:1}
+.et-top{
+  font-family:'Josefin Sans',sans-serif;
+  font-size:.62em;color:rgba(212,175,55,.45);
+  letter-spacing:8px;margin-bottom:10px
+}
+.et-main{
+  font-size:2.8em;color:rgba(232,228,216,.92);
+  letter-spacing:4px;line-height:1.1;text-align:center
+}
+.et-sub{
+  font-family:'Josefin Sans',sans-serif;
+  font-size:.65em;color:rgba(212,175,55,.35);
+  letter-spacing:5px;margin-top:12px
+}
+
+/* Entry bottom hint */
+#entry-bottom{
+  position:fixed;bottom:32px;left:50%;
+  transform:translateX(-50%);
+  z-index:25;pointer-events:none;
+  opacity:0;transition:opacity 1s ease .8s;
+  text-align:center
+}
+#entry-bottom.show{opacity:1}
+.eb-hint{
+  font-family:'Josefin Sans',sans-serif;
+  font-size:.6em;color:rgba(212,175,55,.45);
+  letter-spacing:4px;
+  background:rgba(4,4,14,.75);
+  border:1px solid rgba(212,175,55,.12);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  padding:5px 20px 6px;
+  display:inline-block;
+  animation:breathe 3s ease-in-out infinite
+}
+@keyframes breathe{0%,100%{opacity:.4}50%{opacity:.9}}
+
+/* Transition wipe */
+#scene-wipe{
+  position:fixed;inset:0;z-index:9000;
+  background:#000;
+  opacity:0;pointer-events:none;
+  transition:opacity .6s ease
+}
+#scene-wipe.in{opacity:1;pointer-events:all}
+#scene-wipe.out{opacity:0;pointer-events:none}
+
+/* ═══════════════════════════════════════════════
+   CASE SELECTION PAGE
+═══════════════════════════════════════════════ */
+#case-sel-canvas{position:fixed;inset:0;z-index:10;pointer-events:all}
+#s-case-sel{z-index:20;pointer-events:none}
+
+#case-sel-title{
+  position:fixed;top:0;left:0;right:0;
+  display:flex;flex-direction:column;align-items:center;
+  padding-top:38px;z-index:25;pointer-events:none;
+  opacity:0;transition:opacity 1s ease
+}
+#case-sel-title.show{opacity:1}
+.cst-eyebrow{
+  font-family:'Josefin Sans',sans-serif;
+  font-size:.6em;color:rgba(212,175,55,.45);letter-spacing:7px;margin-bottom:8px
+}
+.cst-main{font-size:2em;color:rgba(230,225,210,.9);letter-spacing:3px}
+
+#case-sel-back{
+  position:fixed;top:20px;left:20px;z-index:30;
+  font-family:'Josefin Sans',sans-serif;font-size:.65em;
+  color:rgba(212,175,55,.6);letter-spacing:3px;
+  background:rgba(4,4,14,.85);border:1px solid rgba(212,175,55,.18);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  padding:7px 16px;cursor:pointer;
+  transition:color .3s,border-color .3s;pointer-events:all
+}
+#case-sel-back:hover{color:var(--gold);border-color:rgba(212,175,55,.4)}
+
+/* Case labels — glass card treatment */
+.case-label{
+  position:fixed;
+  pointer-events:none;
+  text-align:center;z-index:25;
+  opacity:0;transition:opacity .5s ease,transform .4s ease;
+  transform:translateY(6px);
+  /* Glass card */
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  padding:14px 20px 16px;
+  min-width:200px;
+  box-shadow:0 8px 28px rgba(0,0,0,.7);
+  overflow:hidden;
+}
+.case-label::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(212,175,55,.2),transparent);
+}
+.case-label.show{opacity:1;transform:translateY(0)}
+.cl-tag{
+  font-family:'Josefin Sans',sans-serif;
+  font-size:.55em;color:rgba(212,175,55,.5);letter-spacing:5px;margin-bottom:5px
+}
+.cl-title{font-size:1.15em;color:#e0ddd0;letter-spacing:1.5px;margin-bottom:4px}
+.cl-year{
+  font-family:'Josefin Sans',sans-serif;
+  font-size:.58em;color:rgba(212,175,55,.38);letter-spacing:3px
+}
+.case-label.case-hovered{
+  border-color:rgba(212,175,55,.32);
+  box-shadow:0 12px 40px rgba(0,0,0,.8),0 0 20px rgba(212,175,55,.1);
+}
+.case-label.case-hovered .cl-title{color:var(--gold);text-shadow:0 0 20px rgba(212,175,55,.4)}
+.case-label.case-hovered .cl-tag{opacity:1;letter-spacing:6px}
+.case-label.case-hovered .cl-year{color:rgba(212,175,55,.6)}
+.case-label .cl-enter{
+  font-family:'Josefin Sans',sans-serif;
+  font-size:.56em;color:var(--gold);letter-spacing:4px;
+  margin-top:10px;opacity:0;transform:translateY(4px);
+  transition:opacity .35s var(--ease),transform .35s var(--ease);
+  border:1px solid rgba(212,175,55,.25);padding:5px 14px;
+  display:inline-block;background:rgba(4,4,14,.85);backdrop-filter:blur(8px);
+}
+.case-label.case-hovered .cl-enter{opacity:1;transform:translateY(0)}
+
+#case-sel-hint{
+  position:fixed;bottom:26px;left:50%;transform:translateX(-50%);
+  font-family:'Josefin Sans',sans-serif;font-size:.6em;
+  color:rgba(212,175,55,.45);letter-spacing:4px;
+  pointer-events:none;z-index:25;
+  background:rgba(4,4,14,.75);border:1px solid rgba(212,175,55,.12);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  padding:5px 20px 6px;
+  animation:breathe 3s ease-in-out infinite
+}
+
+/* ═══════════════════════════════════════════════
+   3D DEPTH EFFECTS — perspective on labels
+═══════════════════════════════════════════════ */
+.label-3d{
+  transform-style:preserve-3d;
+  perspective:800px;
+}
+
+/* Portal label 3D tilt on hover */
+.portal-label{
+  transition:opacity .5s var(--ease),transform .4s var(--ease),
+             background .3s,border-color .3s,box-shadow .3s;
+}
+.portal-label.tilted{
+  transform:translate(-50%,-50%) perspective(600px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg));
+}
+
+</style>
 </head>
 <body>
-    <div id="loading">
-        <div class="loading-text">ENTERING THE MIND OF SHERLOCK HOLMES</div>
-        <div class="loading-bar">
-            <div class="loading-progress" id="loading-progress"></div>
-        </div>
-    </div>
 
-    <div id="canvas-container"></div>
-    <div class="fog-overlay"></div>
-    <div class="light-rays"></div>
-    <div class="audio-toggle" id="audio-toggle"></div>
-    <button class="skip-button" id="skip-button" onclick="skipToQuestion()">SKIP TO MYSTERY →</button>
-    
-    <div class="sherlock-portrait" id="sherlock-portrait">
-    <img src="image2.jpg" alt="Sherlock Holmes">
+
+<!-- ═══════════════════════════════════════════
+     ENTRY HUB — 3D INTERACTIVE LANDING
+═══════════════════════════════════════════ -->
+<canvas id="entry-canvas"></canvas>
+<div class="screen" id="s-entry"></div>
+
+<!-- Entry title overlay -->
+<div id="entry-title">
+  <div class="et-top">LONDON · 221B BAKER STREET</div>
+  <div class="et-main">Sherlock Holmes</div>
+  <div class="et-sub">WHERE DO YOU BEGIN?</div>
 </div>
 
-
-    <div class="subtitle-container" id="subtitle-container"></div>
-
-    <div id="landing-scene">
-        <div class="landing-title">Which case would you like to revisit?</div>
-        <div class="stories-grid" id="stories-grid">
-            <div class="story-card" data-story="speckled">
-                <div class="story-title">The Speckled Band</div>
-                <div class="story-description">A deadly serpent, a locked room, and a sinister stepfather.</div>
-                <div class="story-year">Published 1892</div>
-            </div>
-            <div class="story-card" data-story="scarlet">
-                <div class="story-title">A Study in Scarlet</div>
-                <div class="story-description">Holmes' first case: murder, revenge, and a ring.</div>
-                <div class="story-year">Published 1887</div>
-            </div>
-            <div class="story-card" data-story="baskerville">
-                <div class="story-title">The Hound of the Baskervilles</div>
-                <div class="story-description">A spectral hound haunts the moors of Devonshire.</div>
-                <div class="story-year">Published 1902</div>
-            </div>
-            <div class="story-card" data-story="bohemia">
-                <div class="story-title">A Scandal in Bohemia</div>
-                <div class="story-description">The woman who outwitted the great detective.</div>
-                <div class="story-year">Published 1891</div>
-            </div>
-        </div>
-    </div>
-
-    <div id="story-container">
-        <div class="scroll-hint">Click characters to hear their testimony</div>
-    </div>
-
-    <div id="question-scene">
-        <div class="question-title">So... who do you believe is the killer?</div>
-        <div class="suspects-grid" id="suspects-grid">
-            <!-- Dynamically populated based on selected story -->
-        </div>
-    </div>
-
-    <div id="reveal-scene">
-        <div class="reveal-message" id="reveal-message"></div>
-        <div class="reveal-explanation" id="reveal-explanation"></div>
-        <button class="restart-button" onclick="restartExperience()">Begin Again</button>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-
-    <script>
-        // GLOBALS
-        let scene, camera, renderer;
-        let sherlockModel, helenModel, roylottModel;
-        let fogParticles = [], dustParticles = [];
-        let audioEnabled = true;
-        let storyPhase = 'landing';
-        let currentDialogue = 0;
-        let characterModels = {};
-        let selectedStory = null;
-        let dialogueTimeouts = [];
-
-        // STORY DATABASE - SHORTER VERSIONS
-        const STORIES = {
-            speckled: {
-                title: 'The Speckled Band',
-                dialogue: [
-                    { speaker: 'Helen Stoner', text: 'Mr. Holmes, my sister died mysteriously. Her last words were "The speckled band!"', type: 'character', delay: 1000 },
-                    { speaker: 'Sherlock Holmes', text: 'Tell me what you observed that night, Miss Stoner.', type: 'sherlock', delay: 5500 },
-                    { speaker: 'Helen Stoner', text: 'A low whistle, then a clanging sound. I found her convulsing in her room.', type: 'character', delay: 10000 },
-                    { speaker: 'Sherlock Holmes', text: 'The ventilator between rooms, the dummy bell-rope, the bed bolted to the floor... most irregular.', type: 'sherlock', delay: 15000 },
-                    { speaker: 'Narration', text: 'That night at 3 AM, Holmes strikes at a creature in the darkness...', type: 'narration', delay: 20000 }
-                ],
-                suspects: [
-                    { id: 'roylott', name: 'Dr. Roylott', detail: 'The Stepfather' },
-                    { id: 'julia', name: 'Julia Stoner', detail: 'The Deceased Sister' },
-                    { id: 'servants', name: 'The Servants', detail: 'Household Staff' },
-                    { id: 'helen', name: 'Helen Stoner', detail: 'The Client' }
-                ],
-                solution: 'roylott',
-                correctMessage: 'Excellent deduction, Holmes.',
-                correctExplanation: `<span class="clue-highlight">Dr. Roylott</span> trained a deadly swamp adder to crawl through the <span class="clue-highlight">ventilator</span> and down the <span class="clue-highlight">bell-rope</span>. The <span class="clue-highlight">bed bolted to the floor</span> ensured his victim stayed within reach. When Holmes struck the serpent, it retreated and killed its master.`,
-                incorrectMessage: 'Not quite, Holmes.',
-                incorrectExplanation: `The answer was <span class="clue-highlight">Dr. Roylott</span>. The clues: the dummy bell-rope, the ventilator, the bolted bed, and Julia's dying words. A trained Indian swamp adder was the weapon. His motive? The inheritance lost upon marriage.`
-            },
-            scarlet: {
-                title: 'A Study in Scarlet',
-                dialogue: [
-                    { speaker: 'Dr. Watson', text: 'Holmes, a body in Lauriston Gardens. No wounds, no cause of death.', type: 'character', delay: 1000 },
-                    { speaker: 'Sherlock Holmes', text: 'Observe the contorted face. And here, written in blood: "RACHE." German for revenge.', type: 'sherlock', delay: 5500 },
-                    { speaker: 'Inspector Lestrade', text: 'A wedding ring was found, though the victim was unmarried.', type: 'character', delay: 10000 },
-                    { speaker: 'Sherlock Holmes', text: 'Two pills—one poison, one harmless. A deadly game of chance forced upon the victim.', type: 'sherlock', delay: 14500 },
-                    { speaker: 'Narration', text: 'The trail leads to America, to murder, and revenge decades old.', type: 'narration', delay: 19000 }
-                ],
-                suspects: [
-                    { id: 'hope', name: 'Jefferson Hope', detail: 'The Cab Driver' },
-                    { id: 'stangerson', name: 'Joseph Stangerson', detail: 'The Secretary' },
-                    { id: 'drebber', name: 'Enoch Drebber', detail: 'The Victim' },
-                    { id: 'lestrade', name: 'Inspector Lestrade', detail: 'Scotland Yard' }
-                ],
-                solution: 'hope',
-                correctMessage: 'Your powers of deduction remain sharp.',
-                correctExplanation: `<span class="clue-highlight">Jefferson Hope</span> was the murderer, seeking revenge for Lucy Ferrier's death. The <span class="clue-highlight">wedding ring</span> was Lucy's. The pills forced his victims to face arbitrary cruelty. A revenge twenty years in the making.`,
-                incorrectMessage: 'You overlooked crucial details.',
-                incorrectExplanation: `The killer was <span class="clue-highlight">Jefferson Hope</span>. The ring belonged to Lucy Ferrier, whose death he swore to avenge. His method: two pills, forcing victims to face the same arbitrary cruelty shown to Lucy.`
-            },
-            baskerville: {
-                title: 'The Hound of the Baskervilles',
-                dialogue: [
-                    { speaker: 'Dr. Mortimer', text: 'Mr. Holmes, Sir Charles Baskerville is dead. Face frozen in terror on the moor.', type: 'character', delay: 1000 },
-                    { speaker: 'Sherlock Holmes', text: 'The legend speaks of a spectral hound. But footprints never lie.', type: 'sherlock', delay: 5500 },
-                    { speaker: 'Dr. Watson', text: 'I saw it! A massive hound, glowing with hellfire across the Grimpen Mire!', type: 'character', delay: 10000 },
-                    { speaker: 'Sherlock Holmes', text: 'Phosphorus, Watson. Applied for an unearthly appearance. But who benefits from his death?', type: 'sherlock', delay: 14500 },
-                    { speaker: 'Sherlock Holmes', text: 'Jack Stapleton... or rather, Rodger Baskerville, the black sheep thought dead.', type: 'sherlock', delay: 19000 }
-                ],
-                suspects: [
-                    { id: 'stapleton', name: 'Jack Stapleton', detail: 'The Naturalist' },
-                    { id: 'barrymore', name: 'Barrymore', detail: 'The Butler' },
-                    { id: 'selden', name: 'Selden', detail: 'The Convict' },
-                    { id: 'mortimer', name: 'Dr. Mortimer', detail: 'The Doctor' }
-                ],
-                solution: 'stapleton',
-                correctMessage: 'Elementary work, my dear fellow.',
-                correctExplanation: `<span class="clue-highlight">Jack Stapleton</span>—or Rodger Baskerville—was the murderer. The <span class="clue-highlight">phosphorescent hound</span> was designed to terrify victims into the Grimpen Mire. His motive was the Baskerville fortune. He died in the mire he used to conceal his crimes.`,
-                incorrectMessage: 'You have been deceived.',
-                incorrectExplanation: `<span class="clue-highlight">Jack Stapleton</span> was Rodger Baskerville, the secret heir. He used a hound painted with <span class="clue-highlight">phosphorus</span> to frighten relatives to death. Pure greed drove him.`
-            },
-            bohemia: {
-                title: 'A Scandal in Bohemia',
-                dialogue: [
-                    { speaker: 'The King', text: 'Mr. Holmes, a photograph exists with Irene Adler that could ruin me.', type: 'character', delay: 1000 },
-                    { speaker: 'Sherlock Holmes', text: 'She keeps it as insurance against your interference. Clever indeed.', type: 'sherlock', delay: 5500 },
-                    { speaker: 'Narration', text: 'Holmes stages a fake fire to reveal where Irene hides the photograph.', type: 'narration', delay: 10000 },
-                    { speaker: 'Dr. Watson', text: 'Holmes, she looked right at you! Could she have recognized your disguise?', type: 'character', delay: 14500 },
-                    { speaker: 'Sherlock Holmes', text: 'She did, Watson. The photograph is gone. She has outwitted me. To me, she is always THE woman.', type: 'sherlock', delay: 19000 }
-                ],
-                suspects: [
-                    { id: 'irene', name: 'Irene Adler', detail: 'The Opera Singer' },
-                    { id: 'norton', name: 'Godfrey Norton', detail: 'The Lawyer' },
-                    { id: 'king', name: 'The King of Bohemia', detail: 'The Royal Client' },
-                    { id: 'servant', name: 'The Servant', detail: 'Household Staff' }
-                ],
-                solution: 'irene',
-                correctMessage: 'You understand the game.',
-                correctExplanation: `There was no crime. <span class="clue-highlight">Irene Adler</span> was the victor. She <span class="clue-highlight">saw through Holmes's disguise</span> and fled with Godfrey Norton, leaving a letter promising silence. Holmes kept her photograph as a reminder he'd been beaten by a woman's intellect.`,
-                incorrectMessage: 'You misread the game.',
-                incorrectExplanation: `<span class="clue-highlight">Irene Adler</span> was no villain—she protected herself from a powerful man. She saw through Holmes's disguise and fled, leaving assurances of silence. Holmes lost this battle.`
-            }
-        };
-
-        window.addEventListener('load', init);
-
-        function init() {
-            setupThreeJS();
-            createAtmosphere();
-            createCharacters();
-            animate();
-            simulateLoading();
-            setupLandingInteractions();
-            setupAudioToggle();
-        }
-
-        function setupThreeJS() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x080808);
-            scene.fog = new THREE.Fog(0x0a0a0a, 8, 45);
-
-            camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(2, 3.5, 20);
-            camera.lookAt(0, 2.5, 0);
-
-            renderer = new THREE.WebGLRenderer({ 
-                antialias: true, 
-                alpha: true,
-                powerPreference: "high-performance"
-            });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.1;
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-            const ambientLight = new THREE.AmbientLight(0x1a1a2a, 0.35);
-            scene.add(ambientLight);
-
-            const keyLight = new THREE.DirectionalLight(0xd4af37, 1.4);
-            keyLight.position.set(-10, 15, 10);
-            keyLight.castShadow = true;
-            keyLight.shadow.mapSize.width = 2048;
-            keyLight.shadow.mapSize.height = 2048;
-            scene.add(keyLight);
-
-            const rimLight = new THREE.DirectionalLight(0x4169e1, 0.7);
-            rimLight.position.set(6, 4, -10);
-            scene.add(rimLight);
-
-            const fillLight = new THREE.PointLight(0xff9955, 0.6, 25);
-            fillLight.position.set(-4, 3, 12);
-            scene.add(fillLight);
-
-            const candle1 = new THREE.PointLight(0xff8833, 0.9, 18);
-            candle1.position.set(-6, 2.5, 4);
-            scene.add(candle1);
-
-            const candle2 = new THREE.PointLight(0xff8833, 0.8, 15);
-            candle2.position.set(6, 2.5, 4);
-            scene.add(candle2);
-
-            window.candleLights = [candle1, candle2];
-
-            window.addEventListener('resize', onWindowResize);
-            document.addEventListener('mousemove', onMouseMove);
-        }
-
-        function createAtmosphere() {
-            createFogLayer(600, 40, 0.7, 0.45);
-            createFogLayer(500, 60, 0.5, 0.3);
-            createFogLayer(400, 90, 0.3, 0.18);
-            createDustParticles();
-            createVolumetricRays();
-        }
-
-        function createFogLayer(count, spread, size, opacity) {
-            const geometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(count * 3);
-            const velocities = [];
-
-            for (let i = 0; i < count * 3; i += 3) {
-                positions[i] = (Math.random() - 0.5) * spread;
-                positions[i + 1] = Math.random() * 18 - 3;
-                positions[i + 2] = (Math.random() - 0.5) * spread;
-                
-                velocities.push({
-                    x: (Math.random() - 0.5) * 0.018,
-                    y: Math.random() * 0.01 + 0.003,
-                    z: (Math.random() - 0.5) * 0.018
-                });
-            }
-
-            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-            const material = new THREE.PointsMaterial({
-                color: 0x9999aa,
-                size: size,
-                transparent: true,
-                opacity: opacity,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false
-            });
-
-            const particles = new THREE.Points(geometry, material);
-            scene.add(particles);
-
-            fogParticles.push({ mesh: particles, velocities });
-        }
-
-        function createDustParticles() {
-            const count = 250;
-            const geometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(count * 3);
-            const velocities = [];
-
-            for (let i = 0; i < count * 3; i += 3) {
-                positions[i] = (Math.random() - 0.5) * 50;
-                positions[i + 1] = Math.random() * 25;
-                positions[i + 2] = (Math.random() - 0.5) * 50;
-                
-                velocities.push({
-                    x: (Math.random() - 0.5) * 0.012,
-                    y: -Math.random() * 0.025 - 0.015,
-                    z: (Math.random() - 0.5) * 0.012
-                });
-            }
-
-            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-            const material = new THREE.PointsMaterial({
-                color: 0xdddddd,
-                size: 0.18,
-                transparent: true,
-                opacity: 0.7,
-                blending: THREE.NormalBlending
-            });
-
-            const particles = new THREE.Points(geometry, material);
-            scene.add(particles);
-
-            dustParticles.push({ mesh: particles, velocities, isDust: true });
-        }
-
-        function createVolumetricRays() {
-            const rayGeometry = new THREE.PlaneGeometry(4, 30);
-            const rayMaterial = new THREE.MeshBasicMaterial({
-                color: 0xd4af37,
-                transparent: true,
-                opacity: 0.09,
-                side: THREE.DoubleSide,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false
-            });
-
-            for (let i = 0; i < 6; i++) {
-                const ray = new THREE.Mesh(rayGeometry, rayMaterial);
-                ray.position.set(
-                    (Math.random() - 0.5) * 25,
-                    12,
-                    (Math.random() - 0.5) * 25
-                );
-                ray.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.4;
-                ray.rotation.z = Math.random() * Math.PI * 2;
-                scene.add(ray);
-            }
-        }
-
-        function createCharacters() {
-            sherlockModel = createSherlockCharacter();
-            sherlockModel.position.set(3, 0, 6);
-            scene.add(sherlockModel);
-            characterModels.sherlock = sherlockModel;
-
-            helenModel = createHelenCharacter();
-            helenModel.position.set(-3.5, 0, 5);
-            scene.add(helenModel);
-            characterModels.helen = helenModel;
-
-            roylottModel = createRoylottCharacter();
-            roylottModel.position.set(0, 0, -3);
-            roylottModel.rotation.y = Math.PI;
-            scene.add(roylottModel);
-            characterModels.roylott = roylottModel;
-        }
-
-        function createSherlockCharacter() {
-            const group = new THREE.Group();
-            const coatMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2a, roughness: 0.65, metalness: 0.1 });
-            const skinMat = new THREE.MeshStandardMaterial({ color: 0xd4a574, roughness: 0.55 });
-
-            const bodyGeo = new THREE.CylinderGeometry(0.7, 1, 4.2, 12);
-            const body = new THREE.Mesh(bodyGeo, coatMat);
-            body.position.y = 1.6;
-            body.castShadow = true;
-            group.add(body);
-
-            const shoulderGeo = new THREE.BoxGeometry(2.3, 0.7, 0.9);
-            const shoulders = new THREE.Mesh(shoulderGeo, coatMat);
-            shoulders.position.y = 3.3;
-            shoulders.castShadow = true;
-            group.add(shoulders);
-
-            const neckGeo = new THREE.CylinderGeometry(0.26, 0.31, 0.55, 8);
-            const neck = new THREE.Mesh(neckGeo, skinMat);
-            neck.position.y = 3.8;
-            group.add(neck);
-
-            const headGeo = new THREE.SphereGeometry(0.58, 22, 22);
-            const head = new THREE.Mesh(headGeo, skinMat);
-            head.position.y = 4.3;
-            head.castShadow = true;
-            group.add(head);
-
-            const eyeMat = new THREE.MeshStandardMaterial({ color: 0x1a3a4a, emissive: 0x0a1a2a, emissiveIntensity: 0.6 });
-            const eyeGeo = new THREE.SphereGeometry(0.09, 10, 10);
-            
-            const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-            leftEye.position.set(-0.19, 4.35, 0.48);
-            group.add(leftEye);
-            
-            const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-            rightEye.position.set(0.19, 4.35, 0.48);
-            group.add(rightEye);
-
-            const hatMat = new THREE.MeshStandardMaterial({ color: 0x3a3a2a, roughness: 0.75 });
-            const hatBaseGeo = new THREE.CylinderGeometry(0.62, 0.62, 0.35, 10);
-            const hatBase = new THREE.Mesh(hatBaseGeo, hatMat);
-            hatBase.position.y = 4.7;
-            group.add(hatBase);
-
-            const hatTopGeo = new THREE.SphereGeometry(0.62, 10, 10, 0, Math.PI * 2, 0, Math.PI / 2);
-            const hatTop = new THREE.Mesh(hatTopGeo, hatMat);
-            hatTop.position.y = 4.88;
-            hatTop.castShadow = true;
-            group.add(hatTop);
-
-            const scarfMat = new THREE.MeshStandardMaterial({ color: 0x2a4a6a, roughness: 0.6 });
-            const scarfGeo = new THREE.TorusGeometry(0.36, 0.13, 9, 14, Math.PI * 1.6);
-            const scarf = new THREE.Mesh(scarfGeo, scarfMat);
-            scarf.position.y = 3.55;
-            scarf.rotation.x = Math.PI / 2;
-            group.add(scarf);
-
-            const pipeMat = new THREE.MeshStandardMaterial({ color: 0x4a3020, roughness: 0.5, metalness: 0.2 });
-            const pipeGeo = new THREE.CylinderGeometry(0.065, 0.085, 1.3, 9);
-            const pipe = new THREE.Mesh(pipeGeo, pipeMat);
-            pipe.position.set(0.42, 3.95, 0.42);
-            pipe.rotation.z = Math.PI / 3;
-            pipe.rotation.y = -Math.PI / 6;
-            group.add(pipe);
-
-            return group;
-        }
-
-        function createHelenCharacter() {
-            const group = new THREE.Group();
-            const dressMat = new THREE.MeshStandardMaterial({ color: 0x3a2a4a, roughness: 0.6 });
-            const skinMat = new THREE.MeshStandardMaterial({ color: 0xf4d4b4, roughness: 0.5 });
-
-            const dressGeo = new THREE.CylinderGeometry(0.6, 1.3, 4, 12);
-            const dress = new THREE.Mesh(dressGeo, dressMat);
-            dress.position.y = 1.5;
-            dress.castShadow = true;
-            group.add(dress);
-
-            const torsoGeo = new THREE.BoxGeometry(1.2, 1.2, 0.6);
-            const torso = new THREE.Mesh(torsoGeo, dressMat);
-            torso.position.y = 3.2;
-            torso.castShadow = true;
-            group.add(torso);
-
-            const neckGeo = new THREE.CylinderGeometry(0.22, 0.25, 0.45, 8);
-            const neck = new THREE.Mesh(neckGeo, skinMat);
-            neck.position.y = 3.9;
-            group.add(neck);
-
-            const headGeo = new THREE.SphereGeometry(0.5, 20, 20);
-            const head = new THREE.Mesh(headGeo, skinMat);
-            head.position.y = 4.35;
-            head.castShadow = true;
-            group.add(head);
-
-            const hairMat = new THREE.MeshStandardMaterial({ color: 0x2a1a0a, roughness: 0.7 });
-            const hairGeo = new THREE.SphereGeometry(0.52, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.6);
-            const hair = new THREE.Mesh(hairGeo, hairMat);
-            hair.position.y = 4.5;
-            group.add(hair);
-
-            return group;
-        }
-
-        function createRoylottCharacter() {
-            const group = new THREE.Group();
-            const coatMat = new THREE.MeshStandardMaterial({ color: 0x2a2a1a, roughness: 0.7 });
-            const skinMat = new THREE.MeshStandardMaterial({ color: 0xc4a484, roughness: 0.6 });
-
-            const bodyGeo = new THREE.CylinderGeometry(0.85, 1.2, 4.5, 12);
-            const body = new THREE.Mesh(bodyGeo, coatMat);
-            body.position.y = 1.7;
-            body.castShadow = true;
-            group.add(body);
-
-            const shoulderGeo = new THREE.BoxGeometry(2.6, 0.8, 1);
-            const shoulders = new THREE.Mesh(shoulderGeo, coatMat);
-            shoulders.position.y = 3.5;
-            shoulders.castShadow = true;
-            group.add(shoulders);
-
-            const neckGeo = new THREE.CylinderGeometry(0.3, 0.35, 0.5, 8);
-            const neck = new THREE.Mesh(neckGeo, skinMat);
-            neck.position.y = 4;
-            group.add(neck);
-
-            const headGeo = new THREE.SphereGeometry(0.62, 20, 20);
-            const head = new THREE.Mesh(headGeo, skinMat);
-            head.position.y = 4.5;
-            head.castShadow = true;
-            group.add(head);
-
-            const beardMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, roughness: 0.8 });
-            const beardGeo = new THREE.SphereGeometry(0.35, 12, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
-            const beard = new THREE.Mesh(beardGeo, beardMat);
-            beard.position.set(0, 4.2, 0.3);
-            group.add(beard);
-
-            return group;
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-
-            [...fogParticles, ...dustParticles].forEach(particleSystem => {
-                const positions = particleSystem.mesh.geometry.attributes.position.array;
-                particleSystem.velocities.forEach((vel, i) => {
-                    const index = i * 3;
-                    positions[index] += vel.x;
-                    positions[index + 1] += vel.y;
-                    positions[index + 2] += vel.z;
-
-                    if (positions[index + 1] > 20) positions[index + 1] = -4;
-                    if (positions[index + 1] < -4) positions[index + 1] = 20;
-                    if (Math.abs(positions[index]) > 30) positions[index] *= -1;
-                    if (Math.abs(positions[index + 2]) > 30) positions[index + 2] *= -1;
-                });
-                particleSystem.mesh.geometry.attributes.position.needsUpdate = true;
-            });
-
-            const time = Date.now() * 0.001;
-            
-            if (sherlockModel) {
-                sherlockModel.position.y = Math.sin(time * 1.2) * 0.05;
-                sherlockModel.rotation.y = Math.sin(time * 0.3) * 0.02;
-            }
-            
-            if (helenModel) {
-                helenModel.position.y = Math.sin(time * 1.4) * 0.04;
-            }
-            
-            if (roylottModel) {
-                roylottModel.position.y = Math.sin(time * 1.0) * 0.06;
-            }
-
-            if (window.candleLights && storyPhase === 'investigation') {
-                window.candleLights.forEach(light => {
-                    light.intensity = 0.6 + Math.random() * 0.5;
-                });
-            }
-
-            renderer.render(scene, camera);
-        }
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        function onMouseMove(event) {
-            const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
-            const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-
-            gsap.to(camera.position, {
-                x: mouseX * 3,
-                y: mouseY * 2 + 3.5,
-                duration: 2.5,
-                ease: 'power2.out'
-            });
-        }
-
-        function simulateLoading() {
-            const progress = document.getElementById('loading-progress');
-            let loadValue = 0;
-
-            const loadInterval = setInterval(() => {
-                loadValue += Math.random() * 18;
-                if (loadValue >= 100) {
-                    loadValue = 100;
-                    clearInterval(loadInterval);
-                    
-                    setTimeout(() => {
-                        document.getElementById('loading').classList.add('hidden');
-                        showLandingScene();
-                    }, 600);
-                }
-                progress.style.width = loadValue + '%';
-            }, 180);
-        }
-
-        function showLandingScene() {
-            const landingScene = document.getElementById('landing-scene');
-            landingScene.classList.add('visible');
-
-            gsap.to('.landing-title', {
-                opacity: 1,
-                y: 0,
-                duration: 2,
-                delay: 0.6,
-                ease: 'power2.out'
-            });
-
-            gsap.to('.stories-grid', {
-                opacity: 1,
-                y: 0,
-                duration: 2,
-                delay: 1.2,
-                ease: 'power2.out'
-            });
-        }
-
-        function setupLandingInteractions() {
-            const storyCards = document.querySelectorAll('.story-card');
-            
-            storyCards.forEach(card => {
-                card.addEventListener('click', () => {
-                    const storyId = card.dataset.story;
-                    selectedStory = STORIES[storyId];
-                    beginMemoryTransition();
-                });
-            });
-        }
-
-        function setupAudioToggle() {
-            const toggle = document.getElementById('audio-toggle');
-            toggle.addEventListener('click', () => {
-                audioEnabled = !audioEnabled;
-                toggle.classList.toggle('muted');
-            });
-        }
-
-        function beginMemoryTransition() {
-            gsap.to(sherlockModel.rotation, { y: Math.PI / 5, duration: 1.5, ease: 'power2.inOut' });
-            gsap.to(scene.fog, { density: 0.18, duration: 3 });
-            gsap.to('#landing-scene', {
-                opacity: 0,
-                duration: 2,
-                ease: 'power2.inOut',
-                onComplete: () => {
-                    document.getElementById('landing-scene').style.display = 'none';
-                    startStory();
-                }
-            });
-            gsap.to(camera.position, { z: 10, y: 4, duration: 3.5, ease: 'power2.inOut' });
-        }
-
-        function startStory() {
-            storyPhase = 'investigation';
-            const storyContainer = document.getElementById('story-container');
-            storyContainer.classList.add('visible');
-
-            // Show skip button
-            document.getElementById('skip-button').classList.add('visible');
-
-            addCharacterMarkers();
-
-            // Clear any existing timeouts
-            dialogueTimeouts.forEach(timeout => clearTimeout(timeout));
-            dialogueTimeouts = [];
-
-            selectedStory.dialogue.forEach(dialogue => {
-                const timeout = setTimeout(() => {
-                    showSubtitle(dialogue.speaker, dialogue.text, dialogue.type);
-                }, dialogue.delay);
-                dialogueTimeouts.push(timeout);
-            });
-
-            const questionTimeout = setTimeout(() => {
-                showQuestion();
-            }, selectedStory.dialogue[selectedStory.dialogue.length - 1].delay + 5000);
-            dialogueTimeouts.push(questionTimeout);
-        }
-
-        function skipToQuestion() {
-            // Clear all dialogue timeouts
-            dialogueTimeouts.forEach(timeout => clearTimeout(timeout));
-            dialogueTimeouts = [];
-            
-            // Clear subtitles
-            document.getElementById('subtitle-container').innerHTML = '';
-            
-            // Hide skip button
-            document.getElementById('skip-button').classList.remove('visible');
-            
-            // Show question immediately
-            showQuestion();
-        }
-
-        function addCharacterMarkers() {
-            const helenMarker = document.createElement('div');
-            helenMarker.className = 'character-marker';
-            helenMarker.style.left = '25%';
-            helenMarker.style.top = '45%';
-            helenMarker.innerHTML = '<div class="character-label">HELEN</div>';
-            helenMarker.onclick = () => speakCharacter('helen');
-            document.getElementById('story-container').appendChild(helenMarker);
-
-            const sherlockMarker = document.createElement('div');
-            sherlockMarker.className = 'character-marker active';
-            sherlockMarker.style.right = '28%';
-            sherlockMarker.style.top = '42%';
-            sherlockMarker.innerHTML = '<div class="character-label">SHERLOCK</div>';
-            sherlockMarker.onclick = () => speakCharacter('sherlock');
-            document.getElementById('story-container').appendChild(sherlockMarker);
-        }
-
-        function speakCharacter(character) {
-            if (character === 'sherlock') {
-                gsap.to(camera.position, { x: 1.5, z: 12, duration: 1.8, ease: 'power2.inOut' });
-            } else if (character === 'helen') {
-                gsap.to(camera.position, { x: -1.5, z: 12, duration: 1.8, ease: 'power2.inOut' });
-            }
-        }
-
-        function showSubtitle(speaker, text, type) {
-            const container = document.getElementById('subtitle-container');
-            const subtitle = document.createElement('div');
-            subtitle.className = `subtitle ${type}`;
-            
-            if (type !== 'narration') {
-                subtitle.innerHTML = `<span class="speaker-name">${speaker}</span>${text}`;
-            } else {
-                subtitle.textContent = text;
-            }
-            
-            container.appendChild(subtitle);
-
-            // Show Sherlock portrait when he speaks
-            if (type === 'sherlock') {
-                const portrait = document.getElementById('sherlock-portrait');
-                portrait.classList.add('active');
-                
-                setTimeout(() => {
-                    portrait.classList.remove('active');
-                }, 4500);
-            }
-
-            setTimeout(() => subtitle.classList.add('active'), 100);
-
-            setTimeout(() => {
-                gsap.to(subtitle, {
-                    opacity: 0,
-                    duration: 0.8,
-                    ease: 'power2.out',
-                    onComplete: () => subtitle.remove()
-                });
-            }, 4500);
-        }
-
-        function showQuestion() {
-            document.querySelector('.scroll-hint').style.display = 'none';
-            document.getElementById('skip-button').classList.remove('visible');
-            
-            // Populate suspects
-            const suspectsGrid = document.getElementById('suspects-grid');
-            suspectsGrid.innerHTML = '';
-            
-            selectedStory.suspects.forEach(suspect => {
-                const card = document.createElement('div');
-                card.className = 'suspect-card';
-                card.dataset.suspect = suspect.id;
-                card.innerHTML = `
-                    <div class="suspect-name">${suspect.name}</div>
-                    <div class="suspect-detail">${suspect.detail}</div>
-                `;
-                card.addEventListener('click', () => revealAnswer(suspect.id));
-                suspectsGrid.appendChild(card);
-            });
-
-            document.getElementById('question-scene').classList.add('visible');
-            storyPhase = 'quiz';
-        }
-
-        function revealAnswer(suspect) {
-            document.getElementById('question-scene').classList.remove('visible');
-            storyPhase = 'reveal';
-            
-            setTimeout(() => {
-                const revealScene = document.getElementById('reveal-scene');
-                const message = document.getElementById('reveal-message');
-                const explanation = document.getElementById('reveal-explanation');
-
-                if (suspect === selectedStory.solution) {
-                    message.textContent = selectedStory.correctMessage;
-                    explanation.innerHTML = selectedStory.correctExplanation;
-                } else {
-                    message.textContent = selectedStory.incorrectMessage;
-                    explanation.innerHTML = selectedStory.incorrectExplanation;
-                }
-
-                revealScene.classList.add('visible');
-
-                gsap.to(camera.position, {
-                    x: 0,
-                    z: 15,
-                    y: 3.5,
-                    duration: 2.5,
-                    ease: 'power2.inOut'
-                });
-            }, 600);
-        }
-
-        function restartExperience() {
-            location.reload();
-        }
-    </script>
+<!-- Entry bottom hint -->
+<div id="entry-bottom">
+  <div class="eb-hint">HOVER OBJECTS · CLICK TO ENTER</div>
+</div>
+
+<!-- Hub object labels (positioned by JS) -->
+<div class="hub-obj-label" id="lbl-case">
+  <div class="hol-eyebrow">INVESTIGATE</div>
+  <div class="hol-name">Solve a Case</div>
+  <div class="hol-hint">3 cases · deduction · suspects</div>
+  <div class="hol-action">ENTER THE CASE ↗</div>
+</div>
+<div class="hub-obj-label" id="lbl-shop">
+  <div class="hol-eyebrow">ACQUIRE</div>
+  <div class="hol-name">The Library</div>
+  <div class="hol-hint">novels &amp; collectibles</div>
+  <div class="hol-action">OPEN SHOP ↗</div>
+</div>
+<div class="hub-obj-label" id="lbl-watch">
+  <div class="hol-eyebrow">OBSERVE</div>
+  <div class="hol-name">The Screening Room</div>
+  <div class="hol-hint">films &amp; scenes</div>
+  <div class="hol-action">WATCH NOW ↗</div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     CASE SELECTION PAGE
+═══════════════════════════════════════════ -->
+<canvas id="case-sel-canvas" style="display:none"></canvas>
+<div class="screen" id="s-case-sel"></div>
+
+<div id="case-sel-title">
+  <div class="cst-eyebrow">SELECT YOUR INVESTIGATION</div>
+  <div class="cst-main">Which Case?</div>
+</div>
+
+<button id="case-sel-back" onclick="backToEntry()">← RETURN</button>
+<div id="case-sel-hint">HOVER TO EXAMINE · CLICK TO INVESTIGATE</div>
+
+<!-- Case labels (positioned by JS) -->
+<div class="case-label" id="cl-gtr">
+  <div class="cl-tag">TRUE CRIME · 1963</div>
+  <div class="cl-title">The Great Train Robbery</div>
+  <div class="cl-year">£2.6 million · 15 men · one night</div>
+  <div class="cl-enter">INVESTIGATE THIS CASE ↗</div>
+</div>
+<div class="case-label" id="cl-band">
+  <div class="cl-tag">HOLMES CANON · 1892</div>
+  <div class="cl-title">The Speckled Band</div>
+  <div class="cl-year">A deadly serpent · a locked room</div>
+  <div class="cl-enter">INVESTIGATE THIS CASE ↗</div>
+</div>
+<div class="case-label" id="cl-hound">
+  <div class="cl-tag">HOLMES CANON · 1902</div>
+  <div class="cl-title">The Hound of the Baskervilles</div>
+  <div class="cl-year">A spectral beast · the Devon moors</div>
+  <div class="cl-enter">INVESTIGATE THIS CASE ↗</div>
+</div>
+
+<!-- Scene transition wipe -->
+<div id="scene-wipe"></div>
+
+<!-- Custom cursor -->
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="load-eye">
+    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" width="80" height="80">
+      <ellipse cx="40" cy="40" rx="36" ry="22" stroke="rgba(212,175,55,0.3)" stroke-width="1"/>
+      <ellipse cx="40" cy="40" rx="36" ry="22" stroke="rgba(212,175,55,0.6)" stroke-width="1.5" stroke-dasharray="226" stroke-dashoffset="0" style="animation:rotate 8s linear infinite"/>
+      <circle cx="40" cy="40" r="12" fill="rgba(212,175,55,0.15)" stroke="rgba(212,175,55,0.5)" stroke-width="1"/>
+      <circle cx="40" cy="40" r="6" fill="rgba(212,175,55,0.6)"/>
+      <circle cx="43" cy="37" r="2" fill="rgba(255,255,255,0.4)"/>
+    </svg>
+  </div>
+  <div class="load-label">ENTERING THE MIND PALACE</div>
+  <div class="load-bar"><div class="load-fill" id="load-fill"></div></div>
+  <div class="load-quote">"When you have eliminated the impossible, whatever remains, however improbable, must be the truth."</div>
+</div>
+
+<!-- Three.js canvas -->
+<div id="three-canvas"></div>
+<div id="vignette"></div>
+
+<!-- Deduction mode overlay -->
+<div id="deduction-overlay">
+  <canvas id="ded-canvas"></canvas>
+</div>
+
+<!-- Deduction mode button -->
+<button id="ded-mode-btn" title="Deduction Mode">🔍</button>
+
+<!-- Sherlock speech bubble -->
+<div id="sherlock-speech">
+  <div class="speech-inner">
+    <div class="speech-text" id="speech-text"></div>
+    <div class="speech-attr">— Sherlock Holmes</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     HUB: Mind Palace
+══════════════════════════════════════ -->
+<div class="screen" id="s-hub">
+  <div id="hub-title">
+    <div class="hub-eyebrow" id="hub-eyebrow">THE MIND PALACE</div>
+    <div class="hub-name">Sherlock Holmes</div>
+    <div class="hub-case-name" id="hub-case-name"></div>
+  </div>
+  <button id="hub-to-entry" onclick="goToEntry()">← EXIT MIND PALACE</button>
+</div>
+<div id="portal-labels">
+  <!-- Portals injected by JS -->
+</div>
+
+<!-- ══════════════════════════════════════
+     221B BAKER STREET ROOM
+══════════════════════════════════════ -->
+<div class="screen" id="s-baker">
+  <div id="baker-room"><!-- Room objects injected by JS --></div>
+  <div id="baker-ui">
+    <button id="baker-back" onclick="goHub()">← MIND PALACE</button>
+    <div id="baker-hint">hover objects to interact · click to investigate</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     EVIDENCE BOARD
+══════════════════════════════════════ -->
+<div class="screen" id="s-evidence">
+  <canvas id="evidence-canvas"></canvas>
+  <button id="ev-back" onclick="goHub()">← MIND PALACE</button>
+  <div id="ev-title">EVIDENCE BOARD</div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SUSPECT RING
+══════════════════════════════════════ -->
+<div class="screen" id="s-suspects">
+  <canvas id="suspects-canvas"></canvas>
+  <button id="susp-back" onclick="goHub()">← MIND PALACE</button>
+  <div id="susp-hint">DRAG TO ROTATE · CLICK TO EXAMINE</div>
+  <div id="susp-info">
+    <div class="si-role" id="si-role"></div>
+    <div class="si-name" id="si-name"></div>
+    <div class="si-portrait" id="si-portrait"></div>
+    <div class="si-bio" id="si-bio"></div>
+    <div class="si-verdict" id="si-verdict"></div>
+    <button class="si-close" onclick="closeSuspectInfo()">CLOSE ×</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     STORY / CHAPTERS
+══════════════════════════════════════ -->
+<div class="screen" id="s-story">
+  <button id="story-back" onclick="goHub()">← MIND PALACE</button>
+</div>
+
+<!-- ══════════════════════════════════════
+     DEDUCTION QUIZ
+══════════════════════════════════════ -->
+<div class="screen" id="s-deduction">
+  <div class="ded-h" id="ded-question"></div>
+  <div class="ded-sub">ANALYSE · DEDUCE · CONCLUDE</div>
+  <div class="ded-grid" id="ded-grid"></div>
+  <button id="ded-back" onclick="goHub()">← RETURN</button>
+</div>
+
+<!-- ══════════════════════════════════════
+     FINAL REVEAL
+══════════════════════════════════════ -->
+<div class="screen" id="s-reveal">
+  <div class="rv-float" style="top:12%;left:5%;--r:-4deg">FINGERPRINTS</div>
+  <div class="rv-float" style="top:22%;right:6%;--r:3deg;animation-delay:1.5s">£2.6 MILLION</div>
+  <div class="rv-float" style="top:68%;left:8%;--r:-2deg;animation-delay:.8s">LEATHERSLADE</div>
+  <div class="rv-float" style="top:75%;right:7%;--r:4deg;animation-delay:2.2s">BRIDEGO BRIDGE</div>
+  <div class="rv-sil">
+    <svg width="120" height="220" viewBox="0 0 120 220" fill="none">
+      <defs><radialGradient id="shg" cx="50%" cy="30%" r="55%"><stop offset="0%" stop-color="#d4af37" stop-opacity=".15"/><stop offset="100%" stop-color="#d4af37" stop-opacity="0"/></radialGradient></defs>
+      <ellipse cx="60" cy="118" rx="54" ry="90" fill="url(#shg)"/>
+      <path d="M28 52 Q60 24 92 52 Q86 40 60 37 Q34 40 28 52Z" fill="#2a2a18"/>
+      <path d="M28 52 Q12 48 16 56 Q24 60 40 54Z" fill="#2a2a18"/>
+      <path d="M92 52 Q108 48 104 56 Q96 60 80 54Z" fill="#2a2a18"/>
+      <ellipse cx="60" cy="68" rx="25" ry="22" fill="#c4a080"/>
+      <path d="M35 90 Q60 82 85 90 L90 114 Q60 106 30 114Z" fill="#2a2a36"/>
+      <path d="M30 114 Q18 126 12 168 Q22 172 42 168 L46 144 Q60 140 74 144 L78 168 Q98 172 108 168 Q102 126 90 114Z" fill="#1a1a28"/>
+      <circle cx="106" cy="162" r="13" fill="none" stroke="#d4af37" stroke-width="2.2" opacity=".6"/>
+      <line x1="116" y1="173" x2="126" y2="185" stroke="#d4af37" stroke-width="3" opacity=".6"/>
+    </svg>
+  </div>
+  <div class="rv-text">
+    <div class="rv-verdict" id="rv-verdict"></div>
+    <div class="rv-explain" id="rv-explain"></div>
+    <div class="rv-closing" id="rv-closing"></div>
+    <button class="btn-wire" onclick="location.reload()">Begin Again</button>
+  </div>
+  <button id="rv-back" onclick="goHub()">← MIND PALACE</button>
+</div>
+
+<!-- ══════════════════════════════════════
+     CRIME TIMELINE
+══════════════════════════════════════ -->
+<div class="screen" id="s-timeline">
+  <button id="tl-back" onclick="goHub()">← MIND PALACE</button>
+  <div id="tl-title">CRIME TIMELINE · 8th AUGUST 1963</div>
+  <div id="tl-track"><!-- Injected by JS --></div>
+  <div id="tl-hint">← DRAG TO TRAVEL THROUGH TIME →</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script>
+'use strict';
+
+/* ══════════════════════════════════════════════════
+   CURSOR
+══════════════════════════════════════════════════ */
+const cursor = document.getElementById('cursor');
+const cursorRing = document.getElementById('cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{
+  mx=e.clientX; my=e.clientY;
+  cursor.style.left=mx+'px'; cursor.style.top=my+'px';
+});
+(function ringLoop(){
+  rx+=(mx-rx)*.14; ry+=(my-ry)*.14;
+  cursorRing.style.left=rx+'px'; cursorRing.style.top=ry+'px';
+  requestAnimationFrame(ringLoop);
+})();
+document.querySelectorAll('button,a,[onclick]').forEach(el=>{
+  el.addEventListener('mouseenter',()=>cursor.classList.add('hover'));
+  el.addEventListener('mouseleave',()=>cursor.classList.remove('hover'));
+});
+
+/* ══════════════════════════════════════════════════
+   SCREEN SYSTEM
+══════════════════════════════════════════════════ */
+let currentScreen = null;
+function showScreen(id) {
+  if(currentScreen==='s-suspects' && id!=='s-suspects'){
+    cancelAnimationFrame(suspAnimFrame2); suspAnimFrame2=null;
+    if(suspCanvas) { suspCanvas.removeEventListener('click',suspClick); }
+    document.getElementById('susp-info').classList.remove('show');
+  }
+  if(currentScreen==='s-evidence' && id!=='s-evidence'){
+    if(evCanvas) { evCanvas.removeEventListener('click',evClick); evCanvas.removeEventListener('mousemove',evHover); }
+  }
+  if(currentScreen==='s-hub' && id!=='s-hub'){
+    document.getElementById('hub-to-entry')?.classList.remove('show');
+  }
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('show'));
+  const el = document.getElementById(id);
+  if(el) el.classList.add('show');
+  currentScreen = id;
+  const btn = document.getElementById('ded-mode-btn');
+  btn.style.display = ['s-hub','s-baker','s-story'].includes(id) ? 'flex' : 'none';
+  if(id==='s-hub' && currentPhase==='mind-palace'){
+    document.getElementById('hub-to-entry')?.classList.add('show');
+  }
+}
+
+function goToEntry() {
+  const wipe = document.getElementById('scene-wipe');
+  wipe.classList.add('in');
+  setTimeout(()=>{
+    if(typeof deductionActive !== 'undefined' && deductionActive) toggleDeductionMode();
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('show'));
+    document.getElementById('hub-title')?.classList.remove('show');
+    document.querySelectorAll('.portal-label').forEach(l=>l.classList.remove('show'));
+    document.getElementById('hub-to-entry').classList.remove('show');
+    currentPhase = 'entry';
+    document.getElementById('three-canvas').style.display='none';
+    document.getElementById('entry-canvas').style.display='block';
+    document.getElementById('s-entry').classList.add('show');
+    document.getElementById('entry-title').classList.add('show');
+    document.getElementById('entry-bottom').classList.add('show');
+    if(entryCamera){ entryCamera.position.set(0,1.2,18); entryCamera.lookAt(0,0.5,0); entryCamera.rotation.set(0,0,0); }
+    if(entryObjects&&entryObjects.shelf) gsap.to(entryObjects.shelf.position,{z:-3.5,duration:.5});
+    if(entryObjects&&entryObjects.projector) gsap.to(entryObjects.projector.position,{z:-1.5,duration:.5});
+    entryLoop();
+    setTimeout(()=>{['lbl-case','lbl-shop','lbl-watch'].forEach((id,i)=>setTimeout(()=>{const el=document.getElementById(id);if(el)el.classList.add('show');},i*150));},400);
+    wipe.classList.remove('in'); wipe.classList.add('out');
+    setTimeout(()=>wipe.classList.remove('out'),700);
+  },650);
+}
+
+/* ══════════════════════════════════════════════════
+   THREE.JS MIND PALACE BACKGROUND
+══════════════════════════════════════════════════ */
+let scene, camera, renderer, clock;
+let sherlockMesh, mindPalaceGroup, portalMeshes=[], dustSystem;
+let camTargetX=0, camTargetY=0;
+let portalWorldPositions = []; // 3D world positions of each portal ring
+
+let mindPalaceInited = false;
+function initThree() {
+  if(mindPalaceInited) return;
+  mindPalaceInited = true;
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x01010a);
+  scene.fog = new THREE.FogExp2(0x01010a, 0.018);
+
+  camera = new THREE.PerspectiveCamera(58, innerWidth/innerHeight, 0.1, 800);
+  camera.position.set(0, 0, 22);
+
+  renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+  document.getElementById('three-canvas').appendChild(renderer.domElement);
+
+  clock = new THREE.Clock();
+
+  scene.add(new THREE.AmbientLight(0x080818, 0.5));
+  const kl = new THREE.DirectionalLight(0xd4af37, 2.0);
+  kl.position.set(-8,14,10); scene.add(kl);
+  const rl = new THREE.DirectionalLight(0x2244aa, 0.8);
+  rl.position.set(8,4,-12); scene.add(rl);
+  const fl = new THREE.PointLight(0xff6622, 1.4, 30);
+  fl.position.set(0,-3,8); scene.add(fl);
+  window._fireLight = fl;
+  const bl = new THREE.PointLight(0x2266cc, 0.6, 25);
+  bl.position.set(0,8,-5); scene.add(bl);
+
+  buildMindPalace();
+  buildSherlockFigure();
+  buildDust();
+  buildGroundGrid();
+
+  window.addEventListener('resize',()=>{
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+
+  document.addEventListener('mousemove',e=>{
+    camTargetX = ((e.clientX/innerWidth)*2-1)*4.0;
+    camTargetY = (-(e.clientY/innerHeight)*2+1)*2.5;
+  });
+
+  threeLoop();
+}
+
+function buildGroundGrid() {
+  // Infinite floor grid for depth
+  const size = 100, divisions = 40;
+  const gridHelper = new THREE.GridHelper(size, divisions, 0xd4af37, 0xd4af37);
+  gridHelper.material.transparent = true;
+  gridHelper.material.opacity = 0.04;
+  gridHelper.position.y = -8;
+  scene.add(gridHelper);
+
+  // Reflective floor plane
+  const floorGeo = new THREE.PlaneGeometry(100, 100);
+  const floorMat = new THREE.MeshStandardMaterial({
+    color: 0x01010a, roughness: 0.1, metalness: 0.8
+  });
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI/2;
+  floor.position.y = -8.05;
+  scene.add(floor);
+}
+
+function buildMindPalace() {
+  mindPalaceGroup = new THREE.Group();
+  scene.add(mindPalaceGroup);
+
+  // Central platform — double-ring
+  const platGeo = new THREE.CylinderGeometry(3.8, 4.5, 0.15, 64);
+  const platMat = new THREE.MeshStandardMaterial({
+    color: 0x080818, roughness:.35, metalness:.7,
+    emissive:0xd4af37, emissiveIntensity:.03
+  });
+  const plat = new THREE.Mesh(platGeo, platMat);
+  plat.position.y = -8; mindPalaceGroup.add(plat);
+
+  // Outer decorative ring
+  const outerRing = new THREE.Mesh(
+    new THREE.TorusGeometry(4.8, 0.06, 12, 80),
+    new THREE.MeshBasicMaterial({color:0xd4af37, transparent:true, opacity:0.15})
+  );
+  outerRing.rotation.x = Math.PI/2;
+  outerRing.position.y = -7.92;
+  mindPalaceGroup.add(outerRing);
+
+  const PORTAL_DEFS = [
+    {angle:0,     r:10, y:0,    col:0xd4af37},
+    {angle:72,    r:10, y:1,    col:0xcc3333},
+    {angle:144,   r:10, y:-1,   col:0x4488cc},
+    {angle:216,   r:10, y:.5,   col:0x88cc44},
+    {angle:288,   r:10, y:-.5,  col:0xcc88ff},
+  ];
+
+  portalWorldPositions = [];
+
+  PORTAL_DEFS.forEach((pd,i) => {
+    const rad = (pd.angle * Math.PI) / 180;
+    const x = Math.cos(rad) * pd.r;
+    const z = Math.sin(rad) * pd.r - 4;
+
+    portalWorldPositions.push(new THREE.Vector3(x, pd.y, z));
+
+    // Outer ring (large)
+    const rg = new THREE.TorusGeometry(1.8, 0.06, 20, 80);
+    const rm = new THREE.MeshStandardMaterial({
+      color:pd.col, emissive:pd.col, emissiveIntensity:.9,
+      roughness:.15, metalness:.8
+    });
+    const ring = new THREE.Mesh(rg, rm);
+    ring.position.set(x, pd.y, z);
+    ring.rotation.x = .12;
+    ring.userData = {portalIdx:i, baseX:.12};
+    mindPalaceGroup.add(ring);
+    portalMeshes.push(ring);
+
+    // Inner ring (counter-rotating)
+    const innerRing = new THREE.Mesh(
+      new THREE.TorusGeometry(1.2, 0.035, 12, 60),
+      new THREE.MeshStandardMaterial({color:pd.col, emissive:pd.col, emissiveIntensity:.6})
+    );
+    innerRing.position.set(x, pd.y, z);
+    innerRing.rotation.x = -.2;
+    innerRing.userData = {inner:true, portalIdx:i};
+    mindPalaceGroup.add(innerRing);
+
+    // Innermost ring (fastest)
+    const coreRing = new THREE.Mesh(
+      new THREE.TorusGeometry(0.65, 0.02, 8, 40),
+      new THREE.MeshBasicMaterial({color:pd.col, transparent:true, opacity:.9})
+    );
+    coreRing.position.set(x, pd.y, z);
+    coreRing.userData = {core:true, portalIdx:i};
+    mindPalaceGroup.add(coreRing);
+
+    // Inner glow disc
+    const dg = new THREE.CircleGeometry(1.65, 48);
+    const dm = new THREE.MeshBasicMaterial({
+      color:pd.col, transparent:true, opacity:.05,
+      side:THREE.DoubleSide
+    });
+    const disc = new THREE.Mesh(dg, dm);
+    disc.position.set(x, pd.y, z);
+    disc.rotation.x = .12;
+    disc.userData = {disc:true, portalIdx:i};
+    mindPalaceGroup.add(disc);
+
+    // Pillar of light from below
+    const pillarGeo = new THREE.CylinderGeometry(0.05, 0.8, 8, 16, 1, true);
+    const pillarMat = new THREE.MeshBasicMaterial({
+      color:pd.col, transparent:true, opacity:.04,
+      side:THREE.DoubleSide
+    });
+    const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+    pillar.position.set(x, pd.y-4, z);
+    mindPalaceGroup.add(pillar);
+
+    addPortalParticles(x, pd.y, z, pd.col);
+  });
+
+  // Connecting light threads
+  const lineMat = new THREE.LineBasicMaterial({
+    color:0xd4af37, transparent:true, opacity:.06
+  });
+  PORTAL_DEFS.forEach((a,i) => {
+    const b = PORTAL_DEFS[(i+1)%PORTAL_DEFS.length];
+    const ra = (a.angle*Math.PI)/180, rb = (b.angle*Math.PI)/180;
+    const pts = [
+      new THREE.Vector3(Math.cos(ra)*a.r, a.y, Math.sin(ra)*a.r-4),
+      new THREE.Vector3(0,0,-4),
+      new THREE.Vector3(Math.cos(rb)*b.r, b.y, Math.sin(rb)*b.r-4)
+    ];
+    const lg = new THREE.BufferGeometry().setFromPoints(pts);
+    mindPalaceGroup.add(new THREE.Line(lg, lineMat));
+  });
+
+  // Floating glyphs
+  for(let i=0;i<50;i++) {
+    const size = .04 + Math.random()*.1;
+    const gg = new THREE.BoxGeometry(size,size,size);
+    const gm = new THREE.MeshBasicMaterial({
+      color:0xd4af37, transparent:true, opacity:.12+Math.random()*.22
+    });
+    const glyph = new THREE.Mesh(gg, gm);
+    const a = Math.random()*Math.PI*2;
+    const r = 3 + Math.random()*16;
+    glyph.position.set(
+      Math.cos(a)*r, (Math.random()-.5)*12,
+      Math.sin(a)*r - 4
+    );
+    glyph.userData.floatSpeed = .3+Math.random()*.8;
+    glyph.userData.floatOffset = Math.random()*Math.PI*2;
+    glyph.userData.rotSpeed = (Math.random()-.5)*.5;
+    mindPalaceGroup.add(glyph);
+  }
+
+  // Nebula-like background sphere
+  const nebGeo = new THREE.SphereGeometry(60, 32, 32);
+  const nebMat = new THREE.MeshBasicMaterial({
+    color:0x0a0820, side:THREE.BackSide, transparent:true, opacity:.6
+  });
+  scene.add(new THREE.Mesh(nebGeo, nebMat));
+}
+
+function addPortalParticles(x, y, z, col) {
+  const n = 32;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(n*3);
+  for(let i=0;i<n*3;i+=3) {
+    const a = Math.random()*Math.PI*2;
+    const r = 1.5+Math.random()*1.0;
+    pos[i] = x+Math.cos(a)*r;
+    pos[i+1] = y+(Math.random()-.5)*2.0;
+    pos[i+2] = z+Math.sin(a)*r;
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const mat = new THREE.PointsMaterial({
+    color:col, size:.07, transparent:true, opacity:.6,
+    blending:THREE.AdditiveBlending, depthWrite:false
+  });
+  scene.add(new THREE.Points(geo,mat));
+}
+
+function buildSherlockFigure() {
+  const g = new THREE.Group();
+  g.position.set(0,-3.8,-2);
+  scene.add(g);
+  window._sherlockGroup = g;
+
+  const bm = new THREE.MeshStandardMaterial({color:0x12122a, roughness:.6});
+  const sm = new THREE.MeshStandardMaterial({color:0xc4a080, roughness:.55});
+  const cm = new THREE.MeshStandardMaterial({color:0x1a1a2a, roughness:.5});
+
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(.55,.8,3.2,12), bm);
+  body.position.y=1.4; g.add(body);
+  const sh = new THREE.Mesh(new THREE.CylinderGeometry(1.1,.7,.5,16), cm);
+  sh.position.y=2.85; g.add(sh);
+  const nk = new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,.35,8), sm);
+  nk.position.y=3.18; g.add(nk);
+  const hd = new THREE.Mesh(new THREE.SphereGeometry(.42,24,24), sm);
+  hd.position.y=3.6; g.add(hd);
+  const hat = new THREE.Mesh(new THREE.CylinderGeometry(.5,.55,.35,32), bm);
+  hat.position.y=3.95; g.add(hat);
+  const brim = new THREE.Mesh(new THREE.CylinderGeometry(.7,.7,.04,32), bm);
+  brim.position.y=3.82; g.add(brim);
+  const pipe = new THREE.Mesh(new THREE.CylinderGeometry(.03,.04,.6,8), new THREE.MeshStandardMaterial({color:0x4a2a08}));
+  pipe.position.set(.28,3.42,-.25); pipe.rotation.z=-.5; g.add(pipe);
+
+  // Glowing eyes
+  const eyeGeo = new THREE.SphereGeometry(.055,8,8);
+  const eyeMat = new THREE.MeshBasicMaterial({color:0xd4af37});
+  const le = new THREE.Mesh(eyeGeo, eyeMat);
+  le.position.set(-.14,3.64,-.34); g.add(le);
+  const re = new THREE.Mesh(eyeGeo, eyeMat);
+  re.position.set(.14,3.64,-.34); g.add(re);
+  window._sherlockEyes = [le,re];
+
+  // Pipe smoke particles
+  const smokeGeo = new THREE.BufferGeometry();
+  const smokePos = new Float32Array(20*3);
+  for(let i=0;i<20*3;i+=3){
+    smokePos[i]=.28+(Math.random()-.5)*.1;
+    smokePos[i+1]=3.6+Math.random()*.8;
+    smokePos[i+2]=-.25;
+  }
+  smokeGeo.setAttribute('position',new THREE.BufferAttribute(smokePos,3));
+  const smoke = new THREE.Points(smokeGeo, new THREE.PointsMaterial({
+    color:0x888899, size:.08, transparent:true, opacity:.3,
+    blending:THREE.AdditiveBlending, depthWrite:false
+  }));
+  g.add(smoke);
+  window._sherlockSmoke = smoke;
+
+  const glowGeo = new THREE.SphereGeometry(1.5,16,16);
+  const glowMat = new THREE.MeshBasicMaterial({color:0xd4af37,transparent:true,opacity:0,side:THREE.BackSide});
+  const glow = new THREE.Mesh(glowGeo, glowMat);
+  glow.position.y=2; g.add(glow);
+  window._sherlockGlow = glow;
+}
+
+function buildDust() {
+  const n=1000;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(n*3), vel=[];
+  for(let i=0;i<n*3;i+=3){
+    pos[i]=(Math.random()-.5)*90;
+    pos[i+1]=(Math.random()-.5)*45;
+    pos[i+2]=(Math.random()-.5)*90;
+    vel.push({
+      x:(Math.random()-.5)*.012,
+      y:Math.random()*.018-.006,
+      z:(Math.random()-.5)*.012
+    });
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  dustSystem = new THREE.Points(geo, new THREE.PointsMaterial({
+    color:0xaaaacc, size:.12, transparent:true, opacity:.22,
+    blending:THREE.AdditiveBlending, depthWrite:false
+  }));
+  scene.add(dustSystem);
+  window._dustVel = vel;
+}
+
+function threeLoop() {
+  requestAnimationFrame(threeLoop);
+  const t = clock.getElapsedTime();
+
+  // Smooth camera with inertia
+  camera.position.x += (camTargetX - camera.position.x) * .04;
+  camera.position.y += (camTargetY - camera.position.y) * .04;
+  camera.position.z = 22 + Math.sin(t*.12)*0.8; // subtle z drift
+  camera.lookAt(0,0,-4);
+
+  // Mind palace rotation — adds subtle Z tilt for 3D depth
+  if(mindPalaceGroup){
+    mindPalaceGroup.rotation.y = t*.03;
+    mindPalaceGroup.rotation.z = Math.sin(t*.08)*.015;
+  }
+
+  // Portal rings — multi-layer counter rotation
+  mindPalaceGroup.children.forEach(ch=>{
+    if(ch.userData.portalIdx !== undefined){
+      const i = ch.userData.portalIdx;
+      const t2 = t*1.4+i*.9;
+      if(!ch.userData.inner && !ch.userData.core && !ch.userData.disc && ch.geometry && ch.geometry.type==='TorusGeometry'){
+        // Outer ring
+        ch.material.emissiveIntensity = .6 + Math.sin(t2)*.38;
+        ch.rotation.z = t*.18*(i%2===0?1:-1);
+        ch.rotation.y = Math.sin(t*.3+i)*.15;
+      } else if(ch.userData.inner){
+        ch.rotation.z = -t*.32*(i%2===0?1:-1);
+        ch.rotation.x = -.2 + Math.sin(t*.4+i)*.08;
+      } else if(ch.userData.core){
+        ch.rotation.z = t*.65*(i%2===0?1:-1);
+        ch.rotation.y = t*.4;
+      } else if(ch.userData.disc){
+        ch.material.opacity = .04 + Math.sin(t2)*.025;
+      }
+    }
+  });
+
+  // Sherlock enhanced animations
+  if(window._sherlockGroup){
+    const sh = window._sherlockGroup;
+    sh.rotation.y = Math.sin(t*.35)*.12;
+    sh.rotation.x = Math.sin(t*.22)*.02;
+    sh.position.y = Math.sin(t*.55)*.08 - 3.8;
+    sh.position.x = Math.sin(t*.28)*.05;
+
+    // Pipe smoke drift
+    if(window._sherlockSmoke){
+      const sp = window._sherlockSmoke.geometry.attributes.position.array;
+      for(let i=0;i<20*3;i+=3){
+        sp[i+1] += .003;
+        sp[i] += Math.sin(t*2.2+i)*.002;
+        if(sp[i+1] > 4.4) { sp[i+1]=3.6; sp[i]=.28+(Math.random()-.5)*.1; }
+      }
+      window._sherlockSmoke.geometry.attributes.position.needsUpdate=true;
+    }
+  }
+
+  // Firelight flicker — more complex
+  if(window._fireLight){
+    window._fireLight.intensity = 1.2 + Math.sin(t*7.3)*.2 + Math.sin(t*13.7)*.12 + Math.sin(t*3.1)*.08;
+  }
+
+  // Glyphs float with individual rotation
+  mindPalaceGroup.children.forEach(ch=>{
+    if(ch.userData.floatSpeed){
+      ch.position.y += Math.sin(t*ch.userData.floatSpeed + ch.userData.floatOffset)*.005;
+      ch.rotation.x += .003 * ch.userData.rotSpeed;
+      ch.rotation.y += .002;
+      ch.rotation.z += .001 * ch.userData.rotSpeed;
+    }
+  });
+
+  // Dust
+  if(dustSystem){
+    const p = dustSystem.geometry.attributes.position.array;
+    window._dustVel.forEach((v,i)=>{
+      const x=i*3;
+      p[x]+=v.x; p[x+1]+=v.y; p[x+2]+=v.z;
+      if(Math.abs(p[x])>45) p[x]*=-.97;
+      if(p[x+1]>22) p[x+1]=-22;
+      if(p[x+1]<-22) p[x+1]=22;
+      if(Math.abs(p[x+2])>45) p[x+2]*=-.97;
+    });
+    dustSystem.geometry.attributes.position.needsUpdate=true;
+  }
+
+  renderer.render(scene, camera);
+
+  // Update portal label positions in 3D screen space
+  updatePortalLabels3D();
+}
+
+// Project 3D portal positions to screen and update labels
+function updatePortalLabels3D() {
+  if(!mindPalaceGroup || currentPhase !== 'mind-palace') return;
+  const labels = document.querySelectorAll('.portal-label');
+  labels.forEach((lbl, i) => {
+    if(!portalWorldPositions[i]) return;
+    // Compute rotated world position
+    const localPos = portalWorldPositions[i].clone();
+    localPos.applyMatrix4(mindPalaceGroup.matrixWorld);
+    // Project to screen
+    const v = localPos.clone().project(camera);
+    const sx = (v.x * .5 + .5) * innerWidth;
+    const sy = (-v.y * .5 + .5) * innerHeight;
+    // Only update if visible (z < 1 = in front of camera)
+    if(v.z < 1){
+      lbl.style.left = sx + 'px';
+      lbl.style.top = (sy - 60) + 'px'; // offset above the ring
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════
+   DEDUCTION MODE
+══════════════════════════════════════════════════ */
+let deductionActive = false;
+let dedCanvas, dedCtx, dedNodes=[], dedAnimFrame;
+const DED_BTN = document.getElementById('ded-mode-btn');
+
+function toggleDeductionMode() {
+  deductionActive = !deductionActive;
+  DED_BTN.classList.toggle('on', deductionActive);
+  const overlay = document.getElementById('deduction-overlay');
+  const threeEl = document.getElementById('three-canvas');
+
+  if(deductionActive) {
+    overlay.classList.add('active');
+    threeEl.classList.add('deduction');
+    if(window._sherlockGlow) gsap.to(window._sherlockGlow.material,{opacity:.18,duration:1.2});
+    initDedCanvas();
+    sherlockSpeak('deductionStart');
+  } else {
+    overlay.classList.remove('active');
+    threeEl.classList.remove('deduction');
+    if(window._sherlockGlow) gsap.to(window._sherlockGlow.material,{opacity:0,duration:.8});
+    cancelAnimationFrame(dedAnimFrame);
+    sherlockSpeak('deductionEnd');
+  }
+}
+DED_BTN.addEventListener('click', toggleDeductionMode);
+
+function initDedCanvas() {
+  dedCanvas = document.getElementById('ded-canvas');
+  dedCtx = dedCanvas.getContext('2d');
+  dedCanvas.width = innerWidth; dedCanvas.height = innerHeight;
+
+  const evItems = ['SIGNAL LAMP','BRIDEGO BRIDGE','LEATHERSLADE','JACK MILLS','£2.6M','FINGERPRINTS','120 MAILBAGS','ARMY LORRIES','TOMMY BUTLER','MONOPOLY BOARD'];
+  dedNodes = evItems.map((item,i)=>({
+    label:item,
+    x: 80 + Math.random()*(innerWidth-160),
+    y: 80 + Math.random()*(innerHeight-160),
+    vx:(Math.random()-.5)*.4, vy:(Math.random()-.5)*.4,
+    r:38+item.length*2.2, pulse:Math.random()*Math.PI*2, opacity:0
+  }));
+
+  const connections = [[0,1],[1,2],[3,0],[4,5],[5,2],[6,1],[7,2],[8,5],[9,2],[3,6]];
+  window._dedConns = connections;
+
+  function dedDraw() {
+    dedCtx.clearRect(0,0,innerWidth,innerHeight);
+    const t = Date.now()*.001;
+
+    dedNodes.forEach(n=>{
+      if(n.opacity<1) n.opacity = Math.min(1, n.opacity+.015);
+      n.x+=n.vx; n.y+=n.vy;
+      if(n.x<n.r||n.x>innerWidth-n.r) n.vx*=-.8;
+      if(n.y<n.r||n.y>innerHeight-n.r) n.vy*=-.8;
+      n.pulse+=.025;
+    });
+
+    connections.forEach(([a,b])=>{
+      const na=dedNodes[a], nb=dedNodes[b];
+      const alpha = Math.min(na.opacity, nb.opacity)*(.3+Math.sin(t+na.pulse)*.15);
+      const grad = dedCtx.createLinearGradient(na.x,na.y,nb.x,nb.y);
+      grad.addColorStop(0,`rgba(204,34,34,${alpha})`);
+      grad.addColorStop(.5,`rgba(212,175,55,${alpha*.8})`);
+      grad.addColorStop(1,`rgba(204,34,34,${alpha})`);
+      dedCtx.beginPath();
+      dedCtx.moveTo(na.x,na.y); dedCtx.lineTo(nb.x,nb.y);
+      dedCtx.strokeStyle=grad; dedCtx.lineWidth=1.2;
+      dedCtx.setLineDash([6,4]); dedCtx.stroke();
+      dedCtx.setLineDash([]);
+      const midX=(na.x+nb.x)/2, midY=(na.y+nb.y)/2;
+      dedCtx.beginPath();
+      dedCtx.arc(midX,midY,2.5,0,Math.PI*2);
+      dedCtx.fillStyle=`rgba(212,175,55,${alpha*1.5})`;
+      dedCtx.fill();
+    });
+
+    dedNodes.forEach(n=>{
+      const glow = dedCtx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r*1.6);
+      glow.addColorStop(0,`rgba(212,175,55,${n.opacity*.1})`);
+      glow.addColorStop(1,'rgba(0,0,0,0)');
+      dedCtx.beginPath();
+      dedCtx.arc(n.x,n.y,n.r*1.6,0,Math.PI*2);
+      dedCtx.fillStyle=glow; dedCtx.fill();
+      dedCtx.beginPath();
+      dedCtx.arc(n.x,n.y,n.r,0,Math.PI*2);
+      dedCtx.fillStyle=`rgba(4,4,14,${n.opacity*.9})`;
+      dedCtx.fill();
+      dedCtx.beginPath();
+      dedCtx.arc(n.x,n.y,n.r+Math.sin(n.pulse)*2,0,Math.PI*2);
+      dedCtx.strokeStyle=`rgba(212,175,55,${n.opacity*.65})`;
+      dedCtx.lineWidth=1.2; dedCtx.stroke();
+      dedCtx.font=`600 ${Math.max(9,Math.min(11,n.r*.28))}px 'Josefin Sans',sans-serif`;
+      dedCtx.fillStyle=`rgba(212,175,55,${n.opacity})`;
+      dedCtx.textAlign='center';
+      dedCtx.fillText(n.label, n.x, n.y+4);
+    });
+
+    if(deductionActive) dedAnimFrame = requestAnimationFrame(dedDraw);
+  }
+  cancelAnimationFrame(dedAnimFrame);
+  dedDraw();
+}
+
+/* ══════════════════════════════════════════════════
+   SHERLOCK SPEECH
+══════════════════════════════════════════════════ */
+const SHERLOCK_LINES = {
+  hubQuotes:[
+    'Every object in this palace holds a memory. Every memory holds a truth.',
+    'I never guess. It is a capital mistake to theorize before one has data.',
+    'You see, but you do not observe. The distinction is clear.',
+    'The world is full of obvious things which nobody by any chance ever observes.'
+  ],
+  bakerEnter:[
+    'Welcome to 221B. Everything here has a story — if you know how to read it.',
+    'My desk, my violin, my chemicals — each one a portal to another case.'
+  ],
+  deductionStart:[
+    'Eliminate all other factors, and the one which remains must be the truth.',
+    'Data! Data! Data! I cannot make bricks without clay.',
+    'See how the evidence arranges itself. The connections are there, waiting.'
+  ],
+  deductionEnd:[
+    'The fog clears. The answer sharpens.',
+    'Elementary — when you see it from the correct angle.'
+  ],
+  caseEnter:[
+    'The game is afoot. Every portal leads deeper into the truth.',
+    'You stand at the threshold of the mind. Choose where to begin.',
+    'Observe. Deduce. Each chamber holds a different piece of the puzzle.',
+    'I have already formed a theory. Let us see if you reach the same conclusion.'
+  ],
+  evidenceBoard:[
+    'Each piece of evidence is a thread. Pull the right one and the whole web unravels.',
+    'The fingerprints did not lie. They never do.'
+  ],
+  suspects:[
+    'Study each face. A man\'s history is written in his posture, his eyes, his shoes.',
+    'The suspect ring. One of them holds the answer — can you see which?'
+  ]
+};
+
+let speechTimer = null;
+function sherlockSpeak(category) {
+  clearTimeout(speechTimer);
+  const lines = SHERLOCK_LINES[category];
+  if(!lines) return;
+  const line = lines[Math.floor(Math.random()*lines.length)];
+  const el = document.getElementById('sherlock-speech');
+  const txt = document.getElementById('speech-text');
+  el.classList.remove('show');
+  setTimeout(()=>{
+    txt.textContent = line;
+    el.classList.add('show');
+    speechTimer = setTimeout(()=>el.classList.remove('show'), 6000);
+  },300);
+}
+
+/* ══════════════════════════════════════════════════
+   PORTAL NAVIGATION
+══════════════════════════════════════════════════ */
+const PORTALS = [
+  {label:'CASE FILES', icon:'📁', sub:'', action:()=>openCaseFiles()},
+  {label:'EVIDENCE',   icon:'🔍', sub:'red string', action:()=>openEvidence()},
+  {label:'SUSPECTS',   icon:'👤', sub:'profile ring', action:()=>openSuspects()},
+  {label:'TIMELINE',   icon:'⏱', sub:'1963', action:()=>openTimeline()},
+  {label:'221B',       icon:'🏠', sub:'baker st', action:()=>open221B()},
+];
+
+function buildPortalLabels() {
+  const container = document.getElementById('portal-labels');
+  container.innerHTML = '';
+  PORTALS.forEach((p,i)=>{
+    const div = document.createElement('div');
+    div.className = 'portal-label hoverable';
+    div.id = 'pl-' + p.label.toLowerCase().replace(/\s/g,'-');
+    // Initial fallback positions (will be overridden by 3D projection)
+    const fallbacks = [
+      {x:'50%',y:'22%'}, {x:'82%',y:'42%'},
+      {x:'72%',y:'74%'}, {x:'28%',y:'74%'}, {x:'18%',y:'42%'}
+    ];
+    div.style.left = fallbacks[i].x;
+    div.style.top  = fallbacks[i].y;
+
+    const subLabel = (i===0 && activeCase) ? `<span class="pl-sub">${activeCase.title}</span>` : (p.sub ? `<span class="pl-sub">${p.sub}</span>` : '');
+    div.innerHTML = `<div class="pl-ring"><span class="pl-icon">${p.icon}</span></div><span class="pl-name">${p.label}</span>${subLabel}`;
+    div.addEventListener('click', ()=>{
+      div.style.transform='translate(-50%,-50%) scale(1.12)';
+      setTimeout(()=>div.style.transform='translate(-50%,-50%) scale(1)',300);
+      p.action();
+    });
+
+    // 3D tilt on mouse move
+    div.addEventListener('mousemove', e=>{
+      const rect = div.getBoundingClientRect();
+      const cx = rect.left + rect.width/2;
+      const cy = rect.top + rect.height/2;
+      const dx = (e.clientX - cx) / (rect.width/2);
+      const dy = (e.clientY - cy) / (rect.height/2);
+      div.style.transform = `translate(-50%,-50%) perspective(500px) rotateY(${dx*8}deg) rotateX(${-dy*6}deg) scale(1.04)`;
+    });
+    div.addEventListener('mouseleave', ()=>{
+      div.style.transform = 'translate(-50%,-50%) scale(1)';
+      div.style.transition = 'transform .4s var(--ease), opacity .5s, background .3s, border-color .3s';
+    });
+
+    container.appendChild(div);
+  });
+}
+
+/* ══════════════════════════════════════════════════
+   CASE FILES
+══════════════════════════════════════════════════ */
+const CASES = [
+  {
+    id:'gtr', title:'The Great Train Robbery', year:'1963',
+    chapters:[
+      {num:'I',title:'The Night Everything Changed',text:'Shortly after <span class="ch-hl">3 o\'clock in the morning</span> on 8th August 1963, the Glasgow-to-London mail train halted at a tampered signal in <span class="ch-hl">Buckinghamshire</span>. Fifteen men had rehearsed this moment for months. They were about to commit the largest cash robbery in British history.',bg:'#010a14'},
+      {num:'II',title:'The Signal at Bridego',text:'A gang member climbed the lineside signal post and <span class="ch-hl">replaced the green light with a battery-powered red lamp</span>, forcing driver Jack Mills to halt at <span class="ch-hl">Bridego Railway Bridge</span>. The technical knowledge required pointed to inside expertise.',bg:'#0a0408'},
+      {num:'III',title:'120 Bags in Twenty Minutes',text:'In near-total darkness, the gang formed a human chain down the embankment. In just <span class="ch-hl">fifteen minutes</span>, they transferred <span class="ch-hl">120 mailbags</span> containing approximately <span class="ch-hl">£2.6 million</span> in used banknotes into waiting lorries.',bg:'#040a04'},
+      {num:'IV',title:'Leatherslade Farm',text:'The lorries drove to <span class="ch-hl">Leatherslade Farm</span> in Oakley, Buckinghamshire. Police discovered the farm within weeks. A <span class="ch-hl">ketchup bottle, a Monopoly board</span>, and vehicle surfaces yielded the fingerprints that broke the case.',bg:'#080a04'},
+      {num:'V',title:'Scotland Yard Closes In',text:'Detective Superintendent <span class="ch-hl">Tommy Butler</span> dedicated years to the pursuit. By 1964, twelve men stood trial at Aylesbury Assizes, receiving sentences of <span class="ch-hl">25 to 30 years</span>. One question remains: who truly orchestrated it?',bg:'#08040e'},
+    ],
+    suspects:[
+      {id:'reynolds',name:'Bruce Reynolds',role:'THE MASTERMIND',bio:'The principal architect of the operation. Reynolds orchestrated months of preparation, assigned roles, and designed the signal manipulation. He evaded capture until 1968.',verdict:'Principal architect. Fingerprints at Leatherslade. Convicted 1969.',portrait:buildPortraitSVG('detective','Bruce Reynolds','MASTERMIND',0x1a1a2a)},
+      {id:'biggs',name:'Ronnie Biggs',role:'THE ACCOMPLICE',bio:'Recruited late, Biggs played a peripheral role. His legendary status came from his dramatic 1965 escape from Wandsworth Prison.',verdict:'Peripheral role. More famous for the escape than the crime.',portrait:buildPortraitSVG('casual','Ronnie Biggs','ACCOMPLICE',0x1a1010)},
+      {id:'edwards',name:'Buster Edwards',role:'THE FINANCIER',bio:'A key figure in financing and logistics. Edwards turned himself in voluntarily after years on the run.',verdict:'Key financier. Voluntary surrender 1966. Jailed 15 years.',portrait:buildPortraitSVG('smart','Buster Edwards','FINANCIER',0x0a1a1a)},
+      {id:'goody',name:'Gordon Goody',role:'THE ORGANISER',bio:'A capable operational organiser on the night of the robbery. Convicted at Aylesbury and sentenced to 25 years.',verdict:'Convicted. 25 years. Shoe evidence was key.',portrait:buildPortraitSVG('sharp','Gordon Goody','ORGANISER',0x1a1008)},
+      {id:'unknown',name:'???',role:'THE UNKNOWN',bio:'One or more individuals who participated in financing or planning and were never identified.',verdict:'Identity unknown. Still unresolved.',portrait:buildUnknownPortrait()},
+    ],
+    deductionQ:'Who was the true architect of the Great Train Robbery?',
+    verdicts:{
+      reynolds:{v:'Correct Deduction.',e:'<span class="hl">Bruce Reynolds</span> was the principal architect.',c:'"The criminal, like the detective, must possess above all one quality — the capacity to plan." — Holmes'},
+      biggs:{v:'Partially Right.',e:'The mastermind was <span class="hl">Bruce Reynolds</span>.',c:'"It is a capital mistake to theorize before one has data." — Holmes'},
+      edwards:{v:'A Credible Theory.',e:'Reynolds coordinated the entire operation. Edwards\' role was significant but subordinate.',c:'"You have been in Afghanistan, I perceive." — Holmes'},
+      goody:{v:'Close, But Incomplete.',e:'The strategic vision originated with <span class="hl">Bruce Reynolds</span>.',c:'"When you eliminate the impossible..." — Holmes'},
+      unknown:{v:'The Open Question.',e:'While <span class="hl">Bruce Reynolds</span> is identified as principal architect, inside railway knowledge remains unexplained.',c:'"There is nothing more deceptive than an obvious fact." — Holmes'}
+    }
+  },
+  {
+    id:'band', title:'The Speckled Band', year:'1892',
+    chapters:[
+      {num:'I',title:'A Lady in Distress',text:'Before eight o\'clock in the morning a young woman arrives at Baker Street, pale and trembling. <span class="ch-hl">Helen Stoner</span> tells Holmes she fears mortal danger — just as her twin sister Julia died mysteriously, her dying words: <span class="ch-hl">"The speckled band!"</span>',bg:'#0e0810'},
+      {num:'II',title:'The Estate at Stoke Moran',text:'Holmes notes: the beds <span class="ch-hl">bolted to the floor</span>, the ventilator connecting two rooms, the dummy bell-rope hanging from a <span class="ch-hl">hook above the bed</span>. These are not features of comfort.',bg:'#0a080e'},
+      {num:'III',title:'The Doctor\'s Animals',text:'Roylott keeps exotic animals — a <span class="ch-hl">cheetah and a baboon</span>. Holmes deduces the true weapon lies not in the open, but concealed within the estate\'s walls.',bg:'#0c0a08'},
+      {num:'IV',title:'A Night Watch',text:'Holmes and Watson spend the night in Julia\'s room in total darkness. A soft hissing sound. Holmes strikes furiously. Moments later a terrible cry rings out — <span class="ch-hl">Dr Roylott is dead.</span>',bg:'#050510'},
+      {num:'V',title:'The Solution Illuminated',text:'The weapon: a <span class="ch-hl">swamp adder</span>, the deadliest snake in India. Trained to travel through the ventilator and down the bell-rope. <span class="ch-hl">His own creature turned upon him.</span>',bg:'#080a12'},
+    ],
+    suspects:[
+      {id:'roylott',name:'Dr Grimesby Roylott',role:'THE STEPFATHER',bio:'Violent, cunning, recently returned from India. Roylott had motive — the inheritance clause — and means.',verdict:'The murderer. His own trained serpent killed him.',portrait:buildPortraitSVG('detective','Dr Roylott','STEPFATHER',0x2a1808)},
+      {id:'helen',name:'Helen Stoner',role:'THE CLIENT',bio:'The surviving stepdaughter who sought Holmes in desperation.',verdict:'The victim — innocent. Her courage saved her life.',portrait:buildPortraitSVG('casual','Helen Stoner','CLIENT',0x081828)},
+      {id:'julia',name:'Julia Stoner',role:'THE DECEASED',bio:'Helen\'s twin sister whose cryptic dying words broke the cipher.',verdict:'The first victim. Her dying words broke the cipher.',portrait:buildPortraitSVG('smart','Julia Stoner','DECEASED',0x180828)},
+      {id:'servants',name:'The Household',role:'THE STAFF',bio:'Roylott\'s sparse household at Stoke Moran.',verdict:'Innocent. Holmes ruled out all household staff.',portrait:buildPortraitSVG('sharp','The Household','STAFF',0x181810)},
+    ],
+    deductionQ:'Who killed Julia Stoner — and with what unusual method?',
+    verdicts:{
+      roylott:{v:'Precisely Correct.',e:'<span class="hl">Dr Grimesby Roylott</span> trained a deadly swamp adder to travel through the ventilator and strike the occupant.',c:'"When a doctor does go wrong he is the first of criminals." — Holmes'},
+      helen:{v:'Incorrect.',e:'Helen Stoner was the intended next victim. The real murderer was <span class="hl">Dr Roylott</span>.',c:'"Violence does, in truth, recoil upon the violent." — Holmes'},
+      julia:{v:'Impossible.',e:'Julia was the first victim. <span class="hl">Dr Roylott</span> was responsible.',c:'"It is a capital mistake to theorize before one has data." — Holmes'},
+      servants:{v:'Incorrect.',e:'The answer lay in the architecture and <span class="hl">Dr Roylott\'s</span> exotic animals.',c:'"There is nothing more deceptive than an obvious fact." — Holmes'},
+    }
+  },
+  {
+    id:'hound', title:'The Hound of the Baskervilles', year:'1902',
+    chapters:[
+      {num:'I',title:'The Curse of the Baskervilles',text:'Dr Mortimer arrives with an ancient manuscript describing a <span class="ch-hl">spectral hound</span>. Sir Charles Baskerville has been found dead, his face frozen in terror. <span class="ch-hl">Enormous footprints of a gigantic hound</span> were found nearby.',bg:'#060e06'},
+      {num:'II',title:'The Heir Returns',text:'Sir Henry Baskerville arrives from Canada. He receives threatening letters and discovers one of his new boots stolen. Holmes notes: someone in London is watching him.',bg:'#08100a'},
+      {num:'III',title:'The Grimpen Mire',text:'A local naturalist, <span class="ch-hl">Jack Stapleton</span>, seems suspiciously knowledgeable about the moor. At night, a howling cry echoes across the darkness of the <span class="ch-hl">Grimpen Mire</span>.',bg:'#040e04'},
+      {num:'IV',title:'The Hound Revealed',text:'The stolen boot was used to give the hound a scent. On a foggy night, the hound is released — <span class="ch-hl">its jaws and muzzle outlined with a ghastly phosphorescent light.</span>',bg:'#040c08'},
+      {num:'V',title:'The True Identity',text:'Stapleton is exposed as <span class="ch-hl">Rodger Baskerville</span>. He had painted the hound with <span class="ch-hl">phosphorus</span> to create the supernatural illusion. He fled into the Grimpen Mire and was never seen again.',bg:'#060c04'},
+    ],
+    suspects:[
+      {id:'stapleton',name:'Jack Stapleton',role:'THE NATURALIST',bio:'A local naturalist — later revealed to be Rodger Baskerville, the illegitimate heir. Cold, calculating.',verdict:'The villain. Drowned in the Grimpen Mire.',portrait:buildPortraitSVG('detective','Jack Stapleton','NATURALIST',0x0a1a08)},
+      {id:'barrymore',name:'Barrymore',role:'THE BUTLER',bio:'Observed sending secret signals with a candle — later revealed to be aiding an escaped convict, his own brother-in-law.',verdict:'Innocent. His secrecy concealed a family affair.',portrait:buildPortraitSVG('sharp','Barrymore','BUTLER',0x1a1820)},
+      {id:'henry',name:'Sir Henry Baskerville',role:'THE HEIR',bio:'The Canadian heir who inherited the cursed estate. The target of Stapleton\'s scheme.',verdict:'The intended victim. Survived.',portrait:buildPortraitSVG('smart','Sir Henry','THE HEIR',0x1a1008)},
+      {id:'mortimer',name:'Dr Mortimer',role:'THE DOCTOR',bio:'The local physician who brought the case to Holmes.',verdict:'Innocent and reliable.',portrait:buildPortraitSVG('casual','Dr Mortimer','DOCTOR',0x181020)},
+    ],
+    deductionQ:'Who unleashed the hound — and what was the supernatural secret?',
+    verdicts:{
+      stapleton:{v:'Exceptional Deduction.',e:'<span class="hl">Jack Stapleton</span> — Rodger Baskerville in disguise — used a hound coated in phosphorus to create a supernatural appearance.',c:'"The world is full of obvious things which nobody by any chance ever observes." — Holmes'},
+      barrymore:{v:'A Red Herring.',e:'Barrymore\'s signals were cover for aiding an escaped convict. <span class="hl">Jack Stapleton</span> was the true villain.',c:'"There is nothing more deceptive than an obvious fact." — Holmes'},
+      henry:{v:'Quite Wrong.',e:'Sir Henry was the victim. <span class="hl">Jack Stapleton</span> — the true Baskerville heir — orchestrated the scheme.',c:'"When you have eliminated the impossible, whatever remains must be the truth." — Holmes'},
+      mortimer:{v:'Incorrect.',e:'The villain was <span class="hl">Jack Stapleton</span> — whose phosphorus-painted hound and false identity made him the boldest criminal Holmes encountered.',c:'"It is a capital mistake to theorize before one has data." — Holmes'},
+    }
+  }
+];
+
+let activeCase = null, activeCaseChapter = 0;
+
+function openCaseFiles() {
+  if (currentPhase === 'mind-palace' && activeCase) {
+    buildChapters();
+    showScreen('s-story');
+    sherlockSpeak('hubQuotes');
+    return;
+  }
+  const wipe = document.getElementById('scene-wipe');
+  wipe.classList.add('in');
+  setTimeout(() => {
+    currentPhase = 'case-sel';
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('show'));
+    document.getElementById('hub-title')?.classList.remove('show');
+    document.querySelectorAll('.portal-label').forEach(l => l.classList.remove('show'));
+    document.getElementById('three-canvas').style.display = 'none';
+    document.getElementById('case-sel-canvas').style.display = 'block';
+    initCaseSelection();
+    document.getElementById('case-sel-title').classList.add('show');
+    document.getElementById('case-sel-hint').style.opacity = '1';
+    wipe.classList.remove('in'); wipe.classList.add('out');
+    setTimeout(() => wipe.classList.remove('out'), 700);
+  }, 650);
+}
+
+function buildChapters() {
+  const s = document.getElementById('s-story');
+  s.querySelectorAll('.chapter').forEach(c=>c.remove());
+  activeCase.chapters.forEach((ch,i)=>{
+    const div = document.createElement('div');
+    div.className = 'chapter'+(i===0?' on':'');
+    div.id = 'ch'+i;
+    div.style.background = ch.bg;
+    const isLast = i===activeCase.chapters.length-1;
+    const navNext = isLast ? `<button class="btn-wire" onclick="openDeduction()">MAKE YOUR DEDUCTION →</button>` : `<button class="btn-wire" onclick="nextChapter()">NEXT →</button>`;
+    const navPrev = i===0?'':`<button class="btn-wire" onclick="prevChapter()">← PREV</button>`;
+    div.innerHTML = `
+      <div class="ch-veil"></div>
+      ${buildChapterBG(ch.bg)}
+      <div class="ch-content">
+        <div class="ch-num">CHAPTER ${ch.num}</div>
+        <div class="ch-title">${ch.title}</div>
+        <div class="ch-text">${ch.text}</div>
+      </div>
+      <div class="ch-nav">
+        <div class="ch-ctr">${i+1} / ${activeCase.chapters.length}</div>
+        ${navPrev}${navNext}
+      </div>`;
+    s.appendChild(div);
+  });
+}
+
+function buildChapterBG(bgColor) {
+  return `<svg class="ch-bg" viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+    <rect width="1440" height="900" fill="${bgColor}"/>
+    <circle cx="720" cy="200" r="300" fill="rgba(212,175,55,0.03)"/>
+    <line x1="0" y1="650" x2="1440" y2="640" stroke="rgba(212,175,55,0.05)" stroke-width="1"/>
+    <line x1="0" y1="680" x2="1440" y2="690" stroke="rgba(212,175,55,0.07)" stroke-width="1.5"/>
+    <g fill="none" stroke="rgba(212,175,55,0.04)" stroke-width="1">
+      ${Array.from({length:12},(_,i)=>`<rect x="${i*130}" y="580" width="100" height="200" rx="2"/>`).join('')}
+    </g>
+  </svg>`;
+}
+
+function nextChapter() {
+  if(activeCaseChapter<activeCase.chapters.length-1){
+    document.getElementById('ch'+activeCaseChapter).classList.remove('on');
+    activeCaseChapter++;
+    document.getElementById('ch'+activeCaseChapter).classList.add('on');
+  }
+}
+function prevChapter() {
+  if(activeCaseChapter>0){
+    document.getElementById('ch'+activeCaseChapter).classList.remove('on');
+    activeCaseChapter--;
+    document.getElementById('ch'+activeCaseChapter).classList.add('on');
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   EVIDENCE BOARD
+══════════════════════════════════════════════════ */
+const EVIDENCE_ITEMS = [
+  {label:'ORDNANCE\nSURVEY MAP',x:.12,y:.22,type:'document'},
+  {label:'MODIFIED\nSIGNAL LAMP',x:.35,y:.18,type:'object'},
+  {label:'FINGERPRINTS\nMATCHED',x:.58,y:.25,type:'forensic'},
+  {label:'LEATHERSLADE\nFARM',x:.78,y:.20,type:'location'},
+  {label:'MONOPOLY\nBOARD',x:.22,y:.55,type:'object'},
+  {label:'ARMY\nLORRIES',x:.45,y:.60,type:'vehicle'},
+  {label:'POLICE\nRADIO SCANNER',x:.68,y:.55,type:'object'},
+  {label:'JACK MILLS\nINCIDENT',x:.15,y:.75,type:'person'},
+  {label:'£2.6M\nINSTER NOTES',x:.85,y:.65,type:'money'},
+  {label:'TOMMY\nBUTLER',x:.50,y:.78,type:'detective'},
+];
+
+const EV_CONNECTIONS = [[0,1],[1,2],[2,3],[4,5],[5,6],[0,4],[3,8],[2,9],[7,1],[8,5],[9,2]];
+let evCanvas, evCtx, evAnimFrame, evSelected=-1, evHoverIdx=-1;
+
+function openEvidence() {
+  showScreen('s-evidence');
+  sherlockSpeak('evidenceBoard');
+  setTimeout(()=>{
+    evCanvas = document.getElementById('evidence-canvas');
+    evCtx = evCanvas.getContext('2d');
+    evCanvas.width = innerWidth; evCanvas.height = innerHeight;
+    evCanvas.addEventListener('click', evClick);
+    evCanvas.addEventListener('mousemove', evHover);
+    drawEvidence();
+  }, 50);
+}
+
+function getEvPos(item){return{x:item.x*innerWidth,y:item.y*innerHeight};}
+
+function evClick(e){
+  const rect=evCanvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  EVIDENCE_ITEMS.forEach((item,i)=>{
+    const p=getEvPos(item);
+    if(Math.hypot(mx-p.x,my-p.y)<52){evSelected=evSelected===i?-1:i;drawEvidence();}
+  });
+}
+function evHover(e){
+  const rect=evCanvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  let nh=-1;
+  EVIDENCE_ITEMS.forEach((item,i)=>{const p=getEvPos(item);if(Math.hypot(mx-p.x,my-p.y)<55)nh=i;});
+  if(nh!==evHoverIdx){evHoverIdx=nh;drawEvidence();}
+}
+
+const EV_COLORS={document:'#d4af37',object:'#cc8844',forensic:'#4488cc',location:'#44aa44',vehicle:'#cc4444',money:'#aaaaff',detective:'#cc88ff',person:'#ffaaaa'};
+
+function drawEvidence(){
+  if(!evCtx) return;
+  evCtx.clearRect(0,0,innerWidth,innerHeight);
+  evCtx.fillStyle='rgba(18,10,8,0.95)';
+  evCtx.fillRect(0,0,innerWidth,innerHeight);
+  for(let i=0;i<innerHeight;i+=6){
+    evCtx.beginPath();evCtx.moveTo(0,i);evCtx.lineTo(innerWidth,i);
+    evCtx.strokeStyle=`rgba(255,200,100,${.005+Math.sin(i*.3)*.003})`;
+    evCtx.lineWidth=.5;evCtx.stroke();
+  }
+  EV_CONNECTIONS.forEach(([a,b])=>{
+    const pa=getEvPos(EVIDENCE_ITEMS[a]),pb=getEvPos(EVIDENCE_ITEMS[b]);
+    const isSC=evSelected===a||evSelected===b;
+    const alpha=isSC?.65:.28;
+    evCtx.beginPath();evCtx.moveTo(pa.x,pa.y);evCtx.lineTo(pb.x,pb.y);
+    evCtx.strokeStyle=`rgba(180,30,30,${alpha})`;evCtx.lineWidth=isSC?2:1.2;evCtx.stroke();
+    if(isSC){
+      evCtx.beginPath();evCtx.moveTo(pa.x,pa.y);evCtx.lineTo(pb.x,pb.y);
+      evCtx.strokeStyle='rgba(212,175,55,0.18)';evCtx.lineWidth=6;evCtx.stroke();
+    }
+  });
+  EVIDENCE_ITEMS.forEach((item,i)=>{
+    const p=getEvPos(item),col=EV_COLORS[item.type]||'#d4af37';
+    const isHov=i===evHoverIdx,isSel=i===evSelected,scale=isHov||isSel?1.1:1;
+    const glow=evCtx.createRadialGradient(p.x,p.y,0,p.x,p.y,55*scale);
+    glow.addColorStop(0,`${col}${Math.round((isHov||isSel?.25:.06)*255).toString(16).padStart(2,'0')}`);
+    glow.addColorStop(1,'rgba(0,0,0,0)');
+    evCtx.beginPath();evCtx.arc(p.x,p.y,55*scale,0,Math.PI*2);evCtx.fillStyle=glow;evCtx.fill();
+    const cw=120*scale,ch2=56*scale;
+    evCtx.fillStyle=`rgba(240,228,200,${.9+(isSel?.06:0)})`;
+    evCtx.beginPath();evCtx.roundRect(p.x-cw/2,p.y-ch2/2,cw,ch2,3);evCtx.fill();
+    evCtx.strokeStyle=isSel?col:'rgba(160,130,80,0.6)';evCtx.lineWidth=isSel?2:1;evCtx.stroke();
+    evCtx.beginPath();evCtx.arc(p.x,p.y-ch2/2-1,6,0,Math.PI*2);
+    evCtx.fillStyle=isHov||isSel?col:'#cc3333';evCtx.fill();
+    const lines=item.label.split('\n');
+    evCtx.font=`bold ${Math.round(9.5*scale)}px 'Special Elite',serif`;
+    evCtx.fillStyle='#1a1008';evCtx.textAlign='center';
+    lines.forEach((ln,li)=>{evCtx.fillText(ln,p.x,p.y-(lines.length-1)*7*scale+li*14*scale);});
+  });
+  if(evHoverIdx>=0){
+    const item=EVIDENCE_ITEMS[evHoverIdx],p=getEvPos(item),col=EV_COLORS[item.type]||'#d4af37';
+    evCtx.fillStyle='rgba(4,4,14,0.95)';
+    evCtx.beginPath();evCtx.roundRect(p.x-72,p.y+50,144,30,2);evCtx.fill();
+    evCtx.strokeStyle=col;evCtx.lineWidth=1;evCtx.stroke();
+    evCtx.font=`600 9px 'Josefin Sans',sans-serif`;
+    evCtx.fillStyle=col;evCtx.textAlign='center';
+    evCtx.fillText('TYPE: '+item.type.toUpperCase(),p.x,p.y+69);
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   SUSPECT RING
+══════════════════════════════════════════════════ */
+let suspCanvas, suspCtx, suspAngle=0, suspTargetAngle=0;
+let suspDragging=false, suspLastX=0, suspHover=-1, suspAnimFrame2;
+
+function buildPortraitSVG(type,name,role,bodyCol){
+  const bc='#'+bodyCol.toString(16).padStart(6,'0');
+  const roleColors={detective:'#3a3a5a',casual:'#3a2020',smart:'#1a2a3a',sharp:'#2a3a1a'};
+  const bg=roleColors[type]||'#2a2a3a';
+  const n=name.replace(/\s/g,'');
+  return `<svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="bg_${n}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${bg}"/><stop offset="100%" stop-color="#080808"/></linearGradient><radialGradient id="f_${n}" cx="50%" cy="44%" r="52%"><stop offset="0%" stop-color="#c49060"/><stop offset="100%" stop-color="#8a5a30"/></radialGradient></defs>
+    <rect width="200" height="260" fill="url(#bg_${n})"/>
+    <path d="M40 150 L70 138 L100 134 L130 138 L160 150 L170 260 L30 260Z" fill="${bc}"/>
+    <ellipse cx="100" cy="98" rx="38" ry="44" fill="url(#f_${n})"/>
+    <ellipse cx="78" cy="96" rx="7" ry="5.5" fill="#ede0cc"/><circle cx="78" cy="96" r="4" fill="#2a1a08"/>
+    <ellipse cx="122" cy="96" rx="7" ry="5.5" fill="#ede0cc"/><circle cx="122" cy="96" r="4" fill="#2a1a08"/>
+    <path d="M88 108 Q100 114 112 108" stroke="#8a5030" stroke-width="1.8" fill="none"/>
+    <rect width="200" height="260" fill="rgba(0,0,0,0.25)"/>
+    <rect width="200" height="260" fill="none" stroke="rgba(212,175,55,0.2)" stroke-width="1"/>
+    <text x="100" y="255" text-anchor="middle" font-family="'Josefin Sans',sans-serif" font-size="7" fill="rgba(212,175,55,0.6)" letter-spacing="2">${role}</text>
+  </svg>`;
+}
+function buildUnknownPortrait(){
+  return `<svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg">
+    <rect width="200" height="260" fill="#050505"/>
+    <text x="100" y="148" text-anchor="middle" font-family="'Playfair Display',Georgia,serif" font-size="80" fill="rgba(212,175,55,0.55)" font-weight="bold">?</text>
+    <rect width="200" height="260" fill="none" stroke="rgba(212,175,55,0.15)" stroke-width="1"/>
+    <text x="100" y="255" text-anchor="middle" font-family="'Josefin Sans',sans-serif" font-size="7" fill="rgba(212,175,55,0.4)" letter-spacing="2">IDENTITY UNKNOWN</text>
+  </svg>`;
+}
+
+function openSuspects(){
+  if(!activeCase){activeCase=CASES[0];}
+  showScreen('s-suspects');
+  sherlockSpeak('suspects');
+  setTimeout(initSuspectRing,60);
+}
+
+function initSuspectRing(){
+  suspCanvas=document.getElementById('suspects-canvas');
+  suspCtx=suspCanvas.getContext('2d');
+  suspCanvas.width=innerWidth;suspCanvas.height=innerHeight;
+  suspCanvas.addEventListener('mousedown',e=>{suspDragging=true;suspLastX=e.clientX});
+  window.addEventListener('mouseup',()=>suspDragging=false);
+  window.addEventListener('mousemove',e=>{
+    if(suspDragging){suspTargetAngle+=((e.clientX-suspLastX)*.008);suspLastX=e.clientX;}
+  });
+  suspCanvas.addEventListener('click',e=>{if(!suspDragging)suspClick(e)});
+  suspCanvas.addEventListener('mousemove',e=>suspMouseMove(e));
+  cancelAnimationFrame(suspAnimFrame2);
+  drawSuspects();
+}
+
+function getSuspectPositions(){
+  const cx=innerWidth/2,cy=innerHeight/2,r=Math.min(innerWidth,innerHeight)*.32;
+  return activeCase.suspects.map((_,i)=>{
+    const a=suspAngle+(i/activeCase.suspects.length)*Math.PI*2-Math.PI*.5;
+    const depth=Math.cos(a+Math.PI);
+    const scale=.65+depth*.35;
+    return{x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r*.4,scale,depth,angle:a,idx:i};
+  }).sort((a,b)=>a.depth-b.depth);
+}
+
+function suspClick(e){
+  const rect=suspCanvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  [...getSuspectPositions()].reverse().forEach(p=>{
+    if(Math.hypot(mx-p.x,my-p.y)<55*p.scale*1.2){openSuspectInfo(p.idx);}
+  });
+}
+function suspMouseMove(e){
+  const rect=suspCanvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  let nh=-1;
+  getSuspectPositions().reverse().forEach(p=>{
+    if(Math.hypot(mx-p.x,my-p.y)<55*p.scale*1.2)nh=p.idx;
+  });
+  if(nh!==suspHover){suspHover=nh;}
+}
+
+function drawSuspects(){
+  if(!suspCtx)return;
+  suspCtx.clearRect(0,0,innerWidth,innerHeight);
+  suspAngle+=(suspTargetAngle-suspAngle)*.08;
+  const t=Date.now()*.001;
+  const cx=innerWidth/2,cy=innerHeight/2,r=Math.min(innerWidth,innerHeight)*.32;
+
+  // Floor ring
+  suspCtx.beginPath();suspCtx.ellipse(cx,cy,r+30,r*.4+12,0,0,Math.PI*2);
+  suspCtx.strokeStyle='rgba(212,175,55,0.12)';suspCtx.lineWidth=1;suspCtx.stroke();
+
+  const sp=suspCtx.createRadialGradient(cx,cy-100,0,cx,cy+60,280);
+  sp.addColorStop(0,'rgba(212,175,55,0.06)');sp.addColorStop(1,'rgba(0,0,0,0)');
+  suspCtx.fillStyle=sp;suspCtx.beginPath();suspCtx.ellipse(cx,cy,300,220,0,0,Math.PI*2);suspCtx.fill();
+
+  getSuspectPositions().forEach(p=>{
+    const susp=activeCase.suspects[p.idx],isHov=suspHover===p.idx,sz=110*p.scale;
+    if(isHov){
+      const spg=suspCtx.createRadialGradient(p.x,p.y-sz,0,p.x,p.y,sz*1.8);
+      spg.addColorStop(0,'rgba(212,175,55,0.15)');spg.addColorStop(1,'rgba(0,0,0,0)');
+      suspCtx.beginPath();suspCtx.ellipse(p.x,p.y,sz*1.5,sz*.8,0,0,Math.PI*2);
+      suspCtx.fillStyle=spg;suspCtx.fill();
+    }
+    suspCtx.beginPath();suspCtx.ellipse(p.x,p.y+sz*.35,sz*.7,sz*.18,0,0,Math.PI*2);
+    suspCtx.fillStyle=`rgba(0,0,0,${.35*p.scale})`;suspCtx.fill();
+    suspCtx.save();suspCtx.translate(p.x,p.y);suspCtx.scale(p.scale,p.scale);
+    suspCtx.fillStyle=`hsl(240,20%,${12+p.depth*8}%)`;
+    suspCtx.beginPath();suspCtx.roundRect(-38,-40,76,100,4);suspCtx.fill();
+    suspCtx.beginPath();suspCtx.ellipse(0,-65,26,30,0,0,Math.PI*2);
+    suspCtx.fillStyle=`hsl(30,35%,${50+p.depth*10}%)`;suspCtx.fill();
+    const na=.4+p.depth*.5+(isHov?.25:0);
+    suspCtx.fillStyle=`rgba(212,175,55,${na})`;
+    suspCtx.font=`600 ${11+p.scale*3}px 'Josefin Sans',sans-serif`;
+    suspCtx.textAlign='center';suspCtx.fillText(susp.name.toUpperCase(),0,80);
+    suspCtx.font=`${8+p.scale*2}px 'Josefin Sans',sans-serif`;
+    suspCtx.fillStyle=`rgba(255,255,255,${na*.6})`;suspCtx.fillText(susp.role,0,96);
+    suspCtx.restore();
+  });
+  suspAnimFrame2=requestAnimationFrame(drawSuspects);
+}
+
+function openSuspectInfo(idx){
+  const susp=activeCase.suspects[idx];
+  document.getElementById('si-role').textContent=susp.role;
+  document.getElementById('si-name').textContent=susp.name;
+  document.getElementById('si-portrait').innerHTML=susp.portrait;
+  document.getElementById('si-bio').textContent=susp.bio;
+  document.getElementById('si-verdict').textContent='⚖ '+susp.verdict;
+  document.getElementById('susp-info').classList.add('show');
+}
+function closeSuspectInfo(){document.getElementById('susp-info').classList.remove('show');}
+
+/* ══════════════════════════════════════════════════
+   CRIME TIMELINE
+══════════════════════════════════════════════════ */
+const TIMELINE_EVENTS = [
+  {time:'21:00',event:'Train departs Glasgow',detail:'The overnight mail train leaves Glasgow Central loaded with used banknotes.'},
+  {time:'23:30',event:'Gang assembles',detail:'Fifteen men gather near Bridego Bridge. Army lorries, walkie-talkies ready.'},
+  {time:'00:30',event:'Leatherslade confirmed',detail:'Final radio check between the farm and the team at the bridge.'},
+  {time:'02:45',event:'Signal tampered',detail:'The green signal lamp is replaced with a battery-powered red one.'},
+  {time:'03:03',event:'Train halts',detail:'The mail train stops at Bridego Railway Bridge. Jack Mills is overpowered.'},
+  {time:'03:05',event:'Transfer begins',detail:'120 mailbags passed hand to hand down the embankment in near-total darkness.'},
+  {time:'03:27',event:'Transfer complete',detail:'£2.6 million loaded onto lorries. The convoy moves toward Leatherslade Farm.'},
+  {time:'04:15',event:'Farm arrival',detail:'Bags counted, money divided. Plan: lie low for several days.'},
+  {time:'Aug 13',event:'Farm discovered',detail:'Fingerprints from a ketchup bottle and Monopoly board break the case.'},
+  {time:'Aug 22',event:'First arrest',detail:'Roger Cordrey arrested with £141,000 in cash.'},
+  {time:'1964',event:'Aylesbury trial',detail:'Twelve defendants tried. Sentences of 25 to 30 years.'},
+  {time:'1968',event:'Reynolds captured',detail:'Mastermind Bruce Reynolds arrested in Torquay.'},
+];
+
+function openTimeline(){showScreen('s-timeline');buildTimeline();}
+function buildTimeline(){
+  const track=document.getElementById('tl-track');
+  track.innerHTML='';
+  TIMELINE_EVENTS.forEach((ev,i)=>{
+    const line=document.createElement('div');line.className='tl-line';track.appendChild(line);
+    const card=document.createElement('div');card.className='tl-card';
+    card.innerHTML=`<div class="tl-dot"></div><div class="tl-time">${ev.time}</div><div class="tl-event">${ev.event}</div><div class="tl-detail">${ev.detail}</div>`;
+    card.style.opacity='0';card.style.transform='translateY(20px)';
+    card.style.transition=`opacity .5s var(--ease) ${i*.05}s, transform .5s var(--ease) ${i*.05}s`;
+    track.appendChild(card);
+    setTimeout(()=>{card.style.opacity='1';card.style.transform='translateY(0)'},60);
+  });
+  let dragging=false,startX=0,scrollStart=0;
+  track.addEventListener('mousedown',e=>{dragging=true;startX=e.pageX;scrollStart=track.scrollLeft;track.style.cursor='grabbing'});
+  window.addEventListener('mouseup',()=>{dragging=false;track.style.cursor='grab'});
+  window.addEventListener('mousemove',e=>{if(dragging)track.scrollLeft=scrollStart-(e.pageX-startX)});
+}
+
+/* ══════════════════════════════════════════════════
+   221B BAKER STREET
+══════════════════════════════════════════════════ */
+const ROOM_OBJECTS=[
+  {id:'desk',icon:'📋',label:'DESK',x:'42%',y:'55%',action:openCaseFiles,hint:'Case files'},
+  {id:'violin',icon:'🎻',label:'VIOLIN',x:'22%',y:'40%',action:toggleDeductionMode,hint:'Deduction mode'},
+  {id:'chem',icon:'⚗️',label:'CHEMISTRY',x:'68%',y:'48%',action:openEvidence,hint:'Evidence analysis'},
+  {id:'fire',icon:'🔥',label:'FIREPLACE',x:'50%',y:'75%',action:openTimeline,hint:'Crime timeline'},
+  {id:'news',icon:'📰',label:'NEWSPAPER',x:'78%',y:'62%',action:openSuspects,hint:'Suspect profiles'},
+];
+
+function open221B(){showScreen('s-baker');buildBakerRoom();sherlockSpeak('bakerEnter');}
+function buildBakerRoom(){
+  const room=document.getElementById('baker-room');room.innerHTML='';
+  ROOM_OBJECTS.forEach(obj=>{
+    const el=document.createElement('div');
+    el.className='room-object hoverable';el.id='ro-'+obj.id;
+    el.style.left=obj.x;el.style.top=obj.y;
+    el.style.position='absolute';el.style.opacity='0';el.style.transform='translate(-50%,-50%)';
+    el.innerHTML=`<div class="ro-glow"></div><div style="font-size:2.8em;text-align:center;filter:drop-shadow(0 0 12px rgba(212,175,55,0.5))">${obj.icon}</div><div class="ro-label">${obj.label}</div>`;
+    el.addEventListener('click',()=>{el.style.transform='translate(-50%,-50%) scale(1.2)';setTimeout(()=>el.style.transform='translate(-50%,-50%)',300);obj.action();});
+    room.appendChild(el);
+    setTimeout(()=>{el.classList.add('show');el.style.transition='opacity 0.5s, transform 0.5s';},100*ROOM_OBJECTS.indexOf(obj)+200);
+  });
+}
+
+/* ══════════════════════════════════════════════════
+   DEDUCTION QUIZ
+══════════════════════════════════════════════════ */
+function openDeduction(){
+  if(!activeCase){activeCase=CASES[0];buildChapters();}
+  document.getElementById('ded-question').textContent=activeCase.deductionQ;
+  const grid=document.getElementById('ded-grid');grid.innerHTML='';
+  activeCase.suspects.forEach(s=>{
+    const c=document.createElement('div');c.className='ded-card hoverable';
+    c.innerHTML=`<div class="ded-name">${s.name}</div><div class="ded-role">${s.role}</div>`;
+    c.onclick=()=>showReveal(s.id);grid.appendChild(c);
+  });
+  showScreen('s-deduction');
+}
+
+function showReveal(suspectId){
+  if(!activeCase) return;
+  const v=activeCase.verdicts[suspectId]||activeCase.verdicts.unknown;
+  document.getElementById('rv-verdict').textContent=v.v;
+  document.getElementById('rv-explain').innerHTML=v.e;
+  document.getElementById('rv-closing').textContent=v.c;
+  showScreen('s-reveal');
+}
+
+/* ══════════════════════════════════════════════════
+   PHASE SYSTEM
+══════════════════════════════════════════════════ */
+let currentPhase = 'entry';
+
+/* ══════════════════════════════════════════════════
+   ENTRY HUB — 3D SCENE
+══════════════════════════════════════════════════ */
+let entryScene, entryCamera, entryRenderer, entryClock;
+let entryObjects={}, entryHovered=null, entryParticles=[];
+let entryCamTargetX=0, entryCamTargetY=0, entryCamCurrentX=0, entryCamCurrentY=0;
+let entryRaf=null;
+
+function initEntryHub(){
+  const canvas=document.getElementById('entry-canvas');
+  entryScene=new THREE.Scene();
+  entryScene.background=new THREE.Color(0x01010a);
+  entryScene.fog=new THREE.FogExp2(0x01010a,0.026);
+  entryCamera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,0.1,500);
+  entryCamera.position.set(0,1.2,18);
+  entryCamera.lookAt(0,0.5,0);
+  entryRenderer=new THREE.WebGLRenderer({canvas,antialias:true});
+  entryRenderer.setSize(innerWidth,innerHeight);
+  entryRenderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  entryRenderer.toneMapping=THREE.ACESFilmicToneMapping;
+  entryRenderer.toneMappingExposure=1.2;
+  entryClock=new THREE.Clock();
+
+  entryScene.add(new THREE.AmbientLight(0x08080f,0.5));
+  const mainLight=new THREE.DirectionalLight(0xd4a060,1.6);mainLight.position.set(-5,12,8);entryScene.add(mainLight);
+  const rimLight=new THREE.DirectionalLight(0x2244aa,0.7);rimLight.position.set(8,3,-10);entryScene.add(rimLight);
+  const fireGlow=new THREE.PointLight(0xff7722,1.8,22);fireGlow.position.set(-7,-2,4);entryScene.add(fireGlow);window._entryFire=fireGlow;
+  const candleA=new THREE.PointLight(0xffbb44,0.9,16);candleA.position.set(3,2,6);entryScene.add(candleA);window._entryCandle=candleA;
+
+  buildEntryFloor();
+  buildEntryObjects();
+  buildEntryParticles();
+  buildEntryRoom();
+
+  canvas.addEventListener('mousemove',onEntryMouseMove);
+  canvas.addEventListener('click',onEntryClick);
+  document.addEventListener('mousemove',e=>{
+    entryCamTargetX=((e.clientX/innerWidth)*2-1)*2.8;
+    entryCamTargetY=(-(e.clientY/innerHeight)*2+1)*1.5;
+  });
+  window.addEventListener('resize',()=>{
+    entryCamera.aspect=innerWidth/innerHeight;
+    entryCamera.updateProjectionMatrix();
+    entryRenderer.setSize(innerWidth,innerHeight);
+  });
+  entryLoop();
+}
+
+function buildEntryFloor(){
+  const geo=new THREE.PlaneGeometry(60,60);
+  const mat=new THREE.MeshStandardMaterial({color:0x06060e,roughness:0.22,metalness:0.55});
+  const floor=new THREE.Mesh(geo,mat);floor.rotation.x=-Math.PI/2;floor.position.y=-4;entryScene.add(floor);
+
+  // Floor grid
+  const grid=new THREE.GridHelper(40,20,0xd4af37,0xd4af37);
+  grid.material.transparent=true;grid.material.opacity=0.04;grid.position.y=-3.99;entryScene.add(grid);
+
+  const lineGeo=new THREE.PlaneGeometry(14,0.02);
+  const lineMat=new THREE.MeshBasicMaterial({color:0xd4af37,transparent:true,opacity:0.1});
+  const line=new THREE.Mesh(lineGeo,lineMat);line.rotation.x=-Math.PI/2;line.position.set(0,-3.98,0);entryScene.add(line);
+}
+
+function buildEntryRoom(){
+  const wallMat=new THREE.MeshStandardMaterial({color:0x07070f,roughness:0.9});
+  const backWall=new THREE.Mesh(new THREE.PlaneGeometry(60,20),wallMat);
+  backWall.position.z=-12;backWall.position.y=6;entryScene.add(backWall);
+
+  const n=200,geo=new THREE.BufferGeometry(),pos=new Float32Array(n*3),vel=[];
+  for(let i=0;i<n*3;i+=3){
+    pos[i]=(Math.random()-.5)*40;pos[i+1]=(Math.random()-.5)*16;pos[i+2]=(Math.random()-.5)*30;
+    vel.push({x:(Math.random()-.5)*.008,y:Math.random()*.012-.004});
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const pts=new THREE.Points(geo,new THREE.PointsMaterial({color:0xd4c090,size:0.08,transparent:true,opacity:0.3,blending:THREE.AdditiveBlending,depthWrite:false}));
+  entryScene.add(pts);entryParticles.push({mesh:pts,vel,pos});
+}
+
+function buildEntryObjects(){
+  // ── CASE FILE (left) ──
+  const caseGroup=new THREE.Group();caseGroup.position.set(-5.5,0.2,-2);
+  caseGroup.userData={id:'case',baseY:0.2,label:'lbl-case'};entryScene.add(caseGroup);entryObjects.case=caseGroup;
+  const folderMat=new THREE.MeshStandardMaterial({color:0x8a4a18,roughness:0.7,metalness:0.1});
+  const folderBack=new THREE.Mesh(new THREE.BoxGeometry(3.2,4.2,0.06),folderMat);caseGroup.add(folderBack);
+  const coverGroup=new THREE.Group();coverGroup.position.set(-1.6,0,0.03);
+  const cover=new THREE.Mesh(new THREE.BoxGeometry(3.2,4.2,0.05),new THREE.MeshStandardMaterial({color:0xa05820,roughness:0.65}));
+  cover.position.x=1.6;coverGroup.add(cover);coverGroup.rotation.y=0.28;caseGroup.add(coverGroup);
+  for(let i=0;i<4;i++){
+    const paper=new THREE.Mesh(new THREE.BoxGeometry(2.9,3.8,0.02),new THREE.MeshStandardMaterial({color:0xf0e8d0,roughness:0.9}));
+    paper.position.set((Math.random()-.5)*.15,(Math.random()-.5)*.1,0.04+i*.015);paper.rotation.z=(Math.random()-.5)*.06;caseGroup.add(paper);
+  }
+  const stampMat=new THREE.MeshBasicMaterial({color:0xcc2222,transparent:true,opacity:0.85});
+  const stamp=new THREE.Mesh(new THREE.PlaneGeometry(2.4,0.5),stampMat);stamp.position.set(0,0.8,0.12);caseGroup.add(stamp);
+  const aura=new THREE.Mesh(new THREE.SphereGeometry(2.8,16,16),new THREE.MeshBasicMaterial({color:0xd4af37,transparent:true,opacity:0,side:THREE.BackSide}));
+  caseGroup.add(aura);caseGroup.userData.aura=aura;
+  const orbit=new THREE.Mesh(new THREE.TorusGeometry(2.2,0.025,12,64),new THREE.MeshBasicMaterial({color:0xd4af37,transparent:true,opacity:0.3}));
+  orbit.rotation.x=Math.PI*.45;caseGroup.add(orbit);caseGroup.userData.orbit=orbit;
+
+  // ── BOOKSHELF (centre) ──
+  const shelfGroup=new THREE.Group();shelfGroup.position.set(0,-0.5,-3.5);
+  shelfGroup.userData={id:'shelf',baseY:-0.5,label:'lbl-shop'};entryScene.add(shelfGroup);entryObjects.shelf=shelfGroup;
+  const shelfMat=new THREE.MeshStandardMaterial({color:0x3a2010,roughness:0.8,metalness:0.1});
+  const plank=new THREE.Mesh(new THREE.BoxGeometry(5.5,0.12,0.9),shelfMat);plank.position.y=-1.4;shelfGroup.add(plank);
+  const plank2=new THREE.Mesh(new THREE.BoxGeometry(5.5,0.12,0.9),shelfMat);plank2.position.y=1.5;shelfGroup.add(plank2);
+  const sideL=new THREE.Mesh(new THREE.BoxGeometry(0.1,3.2,0.9),shelfMat);sideL.position.set(-2.7,0,0);shelfGroup.add(sideL);
+  const sideR=new THREE.Mesh(new THREE.BoxGeometry(0.1,3.2,0.9),shelfMat);sideR.position.set(2.7,0,0);shelfGroup.add(sideR);
+  const bookColors=[0x8B1a1a,0x1a4a8B,0x2a7a2a,0x8B6a1a,0x5a1a8B,0x8B3a1a,0x1a6a6a,0xd4af37,0x6B2a0a,0x2a5a2a];
+  const bookWidths=[0.35,0.45,0.3,0.5,0.38,0.42,0.36,0.28,0.44,0.32];
+  let bx=-2.2;
+  for(let i=0;i<10;i++){
+    const bw=bookWidths[i],bh=2.2+Math.random()*.6;
+    const book=new THREE.Mesh(new THREE.BoxGeometry(bw,bh,0.7),new THREE.MeshStandardMaterial({color:bookColors[i],roughness:0.8}));
+    book.position.set(bx+bw/2,-1.4+bh/2+0.06,0);book.rotation.z=(Math.random()-.5)*.04;shelfGroup.add(book);
+    const spine=new THREE.Mesh(new THREE.BoxGeometry(0.025,bh*.6,0.72),new THREE.MeshBasicMaterial({color:0xd4af37,transparent:true,opacity:0.5}));
+    spine.position.set(bx+bw/2,-1.4+bh/2+0.06,0.01);shelfGroup.add(spine);bx+=bw+0.04;
+  }
+  const shelfAura=new THREE.Mesh(new THREE.SphereGeometry(3.5,16,16),new THREE.MeshBasicMaterial({color:0xd4c060,transparent:true,opacity:0,side:THREE.BackSide}));
+  shelfGroup.add(shelfAura);shelfGroup.userData.aura=shelfAura;
+  const shelfOrbit=new THREE.Mesh(new THREE.TorusGeometry(3.0,0.022,12,64),new THREE.MeshBasicMaterial({color:0xd4af37,transparent:true,opacity:0.22}));
+  shelfOrbit.rotation.x=Math.PI*.4;shelfGroup.add(shelfOrbit);shelfGroup.userData.orbit=shelfOrbit;
+
+  // ── MAGIC LANTERN / PROJECTOR (right) ──
+  const projGroup=new THREE.Group();projGroup.position.set(5.5,-0.3,-1.5);
+  projGroup.userData={id:'projector',baseY:-0.3,label:'lbl-watch'};entryScene.add(projGroup);entryObjects.projector=projGroup;
+  const brassMat=new THREE.MeshStandardMaterial({color:0xb8860b,roughness:0.35,metalness:0.8});
+  const darkMat=new THREE.MeshStandardMaterial({color:0x1a1a08,roughness:0.6});
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(0.8,0.9,2.4,24),brassMat);projGroup.add(body);
+  const lens=new THREE.Mesh(new THREE.CylinderGeometry(0.38,0.42,0.9,20),brassMat);lens.rotation.z=Math.PI/2;lens.position.set(-1.2,0,0);projGroup.add(lens);
+  const lensGlass=new THREE.Mesh(new THREE.CircleGeometry(0.35,24),new THREE.MeshBasicMaterial({color:0xffffcc,transparent:true,opacity:0.15}));
+  lensGlass.rotation.y=Math.PI/2;lensGlass.position.set(-1.66,0,0);projGroup.add(lensGlass);projGroup.userData.lensGlass=lensGlass;
+  const base=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.18,1.4),darkMat);base.position.y=-1.3;projGroup.add(base);
+  const chimney=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.2,0.6,12),brassMat);chimney.position.y=1.5;projGroup.add(chimney);
+  const beam=new THREE.Mesh(new THREE.ConeGeometry(2.5,6,24,1,true),new THREE.MeshBasicMaterial({color:0xfff8e0,transparent:true,opacity:0,side:THREE.BackSide}));
+  beam.rotation.z=Math.PI/2;beam.position.set(-4.2,0,0);projGroup.add(beam);projGroup.userData.beam=beam;
+  const projAura=new THREE.Mesh(new THREE.SphereGeometry(2.8,16,16),new THREE.MeshBasicMaterial({color:0xffee88,transparent:true,opacity:0,side:THREE.BackSide}));
+  projGroup.add(projAura);projGroup.userData.aura=projAura;
+  const projOrbit=new THREE.Mesh(new THREE.TorusGeometry(2.4,0.022,12,64),new THREE.MeshBasicMaterial({color:0xffe844,transparent:true,opacity:0.22}));
+  projOrbit.rotation.x=Math.PI*.42;projGroup.add(projOrbit);projGroup.userData.orbit=projOrbit;
+}
+
+function buildEntryParticles(){
+  const n=120,geo=new THREE.BufferGeometry(),pos=new Float32Array(n*3),vel=[];
+  for(let i=0;i<n*3;i+=3){
+    pos[i]=(Math.random()-.5)*30;pos[i+1]=-3.5+Math.random()*1.5;pos[i+2]=(Math.random()-.5)*20;
+    vel.push({x:(Math.random()-.5)*.005,y:0});
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const fogPts=new THREE.Points(geo,new THREE.PointsMaterial({color:0x8888aa,size:0.35,transparent:true,opacity:0.18,blending:THREE.AdditiveBlending,depthWrite:false}));
+  entryScene.add(fogPts);entryParticles.push({mesh:fogPts,vel,pos});
+}
+
+const entryRaycaster=new THREE.Raycaster(),entryMouse=new THREE.Vector2();
+function getEntryInteractables(){return[entryObjects.case,entryObjects.shelf,entryObjects.projector];}
+
+function onEntryMouseMove(e){
+  entryMouse.x=(e.clientX/innerWidth)*2-1;entryMouse.y=-(e.clientY/innerHeight)*2+1;
+  entryRaycaster.setFromCamera(entryMouse,entryCamera);
+  let hit=null;
+  getEntryInteractables().forEach(obj=>{
+    const intersects=entryRaycaster.intersectObjects(obj.children,true);
+    if(intersects.length>0)hit=obj.userData.id;
+  });
+  if(hit!==entryHovered){entryHovered=hit;updateEntryHover();}
+}
+
+function onEntryClick(e){
+  entryRaycaster.setFromCamera(entryMouse,entryCamera);
+  let hit=null;
+  getEntryInteractables().forEach(obj=>{
+    const intersects=entryRaycaster.intersectObjects(obj.children,true);
+    if(intersects.length>0)hit=obj.userData.id;
+  });
+  if(hit==='case')activateCase();
+  if(hit==='shelf')activateShop();
+  if(hit==='projector')activateProjector();
+}
+
+function updateEntryHover(){
+  ['case','shelf','projector'].forEach(id=>{
+    const obj=entryObjects[id],isHov=id===entryHovered;
+    if(obj.userData.aura)gsap.to(obj.userData.aura.material,{opacity:isHov?.15:0,duration:0.5});
+    if(obj.userData.orbit)gsap.to(obj.userData.orbit.material,{opacity:isHov?.85:.22,duration:0.4});
+    gsap.to(obj.position,{y:obj.userData.baseY+(isHov?.4:0),duration:0.5,ease:'power2.out'});
+    if(id==='projector'&&obj.userData.beam)gsap.to(obj.userData.beam.material,{opacity:isHov?.08:0,duration:0.6});
+    if(id==='projector'&&obj.userData.lensGlass)gsap.to(obj.userData.lensGlass.material,{opacity:isHov?.65:.15,duration:0.5});
+    const lbl=document.getElementById('lbl-'+id);
+    if(lbl){lbl.classList.add('show');lbl.classList.toggle('hovered',isHov);}
+  });
+  document.getElementById('entry-canvas').style.cursor=entryHovered?'pointer':'default';
+}
+
+function worldToScreen(pos,cam){
+  const v=pos.clone().project(cam);
+  return{x:(v.x*.5+.5)*innerWidth,y:(-v.y*.5+.5)*innerHeight};
+}
+
+function updateEntryLabels(){
+  const labelOffsets={case:{dx:0,dy:130},shelf:{dx:0,dy:170},projector:{dx:0,dy:110}};
+  ['case','shelf','projector'].forEach(id=>{
+    const obj=entryObjects[id],lbl=document.getElementById('lbl-'+id);
+    if(!lbl||!obj)return;
+    const worldPos=new THREE.Vector3();obj.getWorldPosition(worldPos);
+    const screen=worldToScreen(worldPos,entryCamera);
+    const off=labelOffsets[id];
+    lbl.style.left=(screen.x+off.dx)+'px';
+    lbl.style.top=(screen.y+off.dy)+'px';
+    lbl.style.transform='translate(-50%, 0)';
+  });
+}
+
+function entryLoop(){
+  if(currentPhase!=='entry')return;
+  entryRaf=requestAnimationFrame(entryLoop);
+  const t=entryClock.getElapsedTime();
+  entryCamCurrentX+=(entryCamTargetX-entryCamCurrentX)*.045;
+  entryCamCurrentY+=(entryCamTargetY-entryCamCurrentY)*.045;
+  entryCamera.position.x=entryCamCurrentX;
+  entryCamera.position.y=1.2+entryCamCurrentY*.4;
+  entryCamera.lookAt(0,0.5,0);
+
+  ['case','shelf','projector'].forEach((id,i)=>{
+    const obj=entryObjects[id];if(!obj)return;
+    const isHov=id===entryHovered;
+    obj.position.y=obj.userData.baseY+Math.sin(t*.7+i*1.2)*.08+(isHov?.35:0);
+    if(id==='case'){
+      obj.rotation.y=Math.sin(t*.4)*.06+(isHov?.1:0);
+      // Subtle tilt when hovered
+      if(isHov) obj.rotation.x=Math.sin(t*1.2)*.03;
+    }
+    if(id==='shelf')obj.rotation.y=Math.sin(t*.35+1)*.04;
+    if(id==='projector'){
+      obj.rotation.y=Math.sin(t*.45+2)*.05;
+      if(isHov&&obj.userData.lensGlass)obj.userData.lensGlass.material.opacity=0.4+Math.sin(t*3)*.18;
+    }
+    if(obj.userData.orbit)obj.userData.orbit.rotation.z=t*.3*(i%2===0?1:-1);
+
+    // Depth blur on non-hovered objects (CSS filter via userData)
+    const blurStrength = entryHovered && !isHov ? '2px' : '0px';
+    // We can't do per-object blur in THREE.js easily, skip
+  });
+
+  if(window._entryFire)window._entryFire.intensity=1.6+Math.sin(t*8.2)*.3+Math.sin(t*13.5)*.15;
+  if(window._entryCandle)window._entryCandle.intensity=0.8+Math.sin(t*5.1)*.15;
+
+  entryParticles.forEach(ps=>{
+    const p=ps.mesh.geometry.attributes.position.array;
+    ps.vel.forEach((v,i)=>{
+      const x=i*3;p[x]+=v.x;p[x+1]+=v.y;
+      if(Math.abs(p[x])>15)p[x]*=-.95;
+      if(p[x+1]>-2){p[x+1]=-4+Math.random();}
+    });
+    ps.mesh.geometry.attributes.position.needsUpdate=true;
+  });
+
+  updateEntryLabels();
+  entryRenderer.render(entryScene,entryCamera);
+}
+
+function activateCase(){
+  entryHovered=null;
+  const obj=entryObjects.case;
+  const targetPos=new THREE.Vector3();obj.getWorldPosition(targetPos);
+  gsap.to(obj.userData.aura.material,{opacity:0.4,duration:0.3});
+  obj.children.forEach((child,i)=>{
+    if(child.geometry)gsap.to(child.rotation,{z:child.rotation.z+(Math.random()-.5)*.12,duration:0.25,delay:i*.04});
+  });
+  gsap.to(entryCamera.position,{x:targetPos.x*.35,y:targetPos.y+0.8,z:4.5,duration:1.5,ease:'power3.inOut',onComplete:()=>transitionToCaseSelection()});
+  gsap.to(entryCamera.rotation,{x:-0.06,duration:1.5,ease:'power3.inOut'});
+  ['shelf','projector'].forEach(id=>{gsap.to(entryObjects[id].position,{z:entryObjects[id].position.z-4,duration:1.0,ease:'power2.in'});});
+}
+
+function activateShop(){
+  const obj=entryObjects.shelf;
+  gsap.to(obj.userData.aura.material,{opacity:0.3,duration:0.2,yoyo:true,repeat:1});
+  gsap.to(obj.position,{y:obj.userData.baseY+0.8,duration:0.5,ease:'back.out(1.5)',yoyo:true,repeat:1});
+  if(obj.userData.orbit){gsap.to(obj.userData.orbit.material,{opacity:1.0,duration:0.3});gsap.to(obj.userData.orbit.rotation,{z:obj.userData.orbit.rotation.z+Math.PI*2,duration:0.8,ease:'power2.in'});}
+  let bookIdx=0;
+  obj.children.forEach((child,i)=>{
+    if(child.isMesh&&child.geometry.type==='BoxGeometry'&&child.geometry.parameters&&child.geometry.parameters.height>0.5){
+      const delay=bookIdx*55,dir=bookIdx%2===0?1:-1;
+      setTimeout(()=>{
+        gsap.to(child.position,{y:child.position.y+0.45*dir,duration:0.25,yoyo:true,repeat:1,ease:'power1.out'});
+        gsap.to(child.rotation,{z:child.rotation.z+0.12*dir,duration:0.25,yoyo:true,repeat:1});
+      },delay);bookIdx++;
+    }
+  });
+  setTimeout(()=>{gsap.to(obj.userData.aura.material,{opacity:0,duration:0.6});window.open('https://www.amazon.com/s?k=sherlock+holmes+books+collectibles','_blank');},1100);
+}
+
+function activateProjector(){
+  const obj=entryObjects.projector;
+  gsap.to(obj.position,{x:obj.position.x+0.04,duration:0.06,yoyo:true,repeat:8});
+  setTimeout(()=>{
+    if(obj.userData.lensGlass){gsap.to(obj.userData.lensGlass.material,{opacity:0.3,duration:0.1,yoyo:true,repeat:3});gsap.to(obj.userData.lensGlass.material,{opacity:1.0,duration:0.4,delay:0.4});}
+  },400);
+  setTimeout(()=>{
+    if(obj.userData.beam)gsap.to(obj.userData.beam.material,{opacity:0.22,duration:0.6,ease:'power2.in'});
+    gsap.to(obj.userData.aura.material,{opacity:0.25,duration:0.5});
+    if(window._entryFire)gsap.to(window._entryFire,{intensity:3.5,duration:0.4,yoyo:true,repeat:1});
+  },700);
+  setTimeout(()=>{
+    gsap.to(obj.userData.beam?.material||{},{opacity:0,duration:1.5,delay:0.3});
+    gsap.to(obj.userData.aura.material,{opacity:0,duration:1.2});
+    window.open('https://www.youtube.com/results?search_query=sherlock+holmes+best+scenes+cinematic','_blank');
+  },1200);
+}
+
+/* ══════════════════════════════════════════════════
+   TRANSITION: ENTRY → CASE SELECTION
+══════════════════════════════════════════════════ */
+function transitionToCaseSelection(){
+  const wipe=document.getElementById('scene-wipe');
+  wipe.classList.add('in');
+  setTimeout(()=>{
+    currentPhase='case-sel';
+    cancelAnimationFrame(entryRaf);
+    document.getElementById('entry-canvas').style.display='none';
+    document.getElementById('entry-title').classList.remove('show');
+    document.getElementById('entry-bottom').classList.remove('show');
+    ['lbl-case','lbl-shop','lbl-watch'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('show');});
+    document.getElementById('case-sel-canvas').style.display='block';
+    initCaseSelection();
+    wipe.classList.remove('in');wipe.classList.add('out');
+    document.getElementById('case-sel-title').classList.add('show');
+    document.getElementById('case-sel-hint').style.opacity='1';
+    setTimeout(()=>wipe.classList.remove('out'),700);
+  },650);
+}
+
+function backToEntry(){
+  const wipe=document.getElementById('scene-wipe');wipe.classList.add('in');
+  setTimeout(()=>{
+    currentPhase='entry';cancelAnimationFrame(caseSelRaf);
+    document.getElementById('case-sel-canvas').style.display='none';
+    document.getElementById('case-sel-title').classList.remove('show');
+    document.getElementById('case-sel-hint').style.opacity='0';
+    ['cl-gtr','cl-band','cl-hound'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('show');});
+    document.getElementById('entry-canvas').style.display='block';
+    document.getElementById('entry-title').classList.add('show');
+    document.getElementById('entry-bottom').classList.add('show');
+    entryCamera.position.set(0,1.2,18);entryCamera.lookAt(0,0.5,0);entryCamera.rotation.set(0,0,0);
+    entryLoop();
+    setTimeout(()=>{'lbl-case lbl-shop lbl-watch'.split(' ').forEach((id,i)=>setTimeout(()=>{const el=document.getElementById(id);if(el)el.classList.add('show');},i*150));},300);
+    wipe.classList.remove('in');wipe.classList.add('out');setTimeout(()=>wipe.classList.remove('out'),700);
+  },650);
+}
+
+/* ══════════════════════════════════════════════════
+   CASE SELECTION — 3D SCENE
+══════════════════════════════════════════════════ */
+let caseSelScene,caseSelCamera,caseSelRenderer,caseSelClock;
+let caseSelObjects=[],caseSelHovered=-1,caseSelRaf=null;
+let caseSelCamTargetX=0,caseSelCamCurrentX=0;
+const caseSelRaycaster=new THREE.Raycaster(),caseSelMouse=new THREE.Vector2();
+
+const CASE_DEFS=[
+  {id:'gtr',title:'Great Train Robbery',year:'1963',color:0xcc4422,emissive:0xcc2200,labelId:'cl-gtr',pos:[-5.5,0.2,0],rot:[0,0.25,0]},
+  {id:'band',title:'The Speckled Band',year:'1892',color:0x2244aa,emissive:0x1133cc,labelId:'cl-band',pos:[0,0.5,-1.5],rot:[0,0,0]},
+  {id:'hound',title:'Hound of Baskervilles',year:'1902',color:0x336633,emissive:0x224422,labelId:'cl-hound',pos:[5.5,0.2,0],rot:[0,-0.25,0]}
+];
+
+function initCaseSelection(){
+  const canvas=document.getElementById('case-sel-canvas');
+  caseSelScene=new THREE.Scene();caseSelScene.background=new THREE.Color(0x01010a);caseSelScene.fog=new THREE.FogExp2(0x01010a,0.025);
+  caseSelCamera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,0.1,500);caseSelCamera.position.set(0,1,18);caseSelCamera.lookAt(0,0,0);
+  caseSelRenderer=new THREE.WebGLRenderer({canvas,antialias:true});caseSelRenderer.setSize(innerWidth,innerHeight);caseSelRenderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  caseSelRenderer.toneMapping=THREE.ACESFilmicToneMapping;caseSelRenderer.toneMappingExposure=1.1;caseSelClock=new THREE.Clock();
+  caseSelScene.add(new THREE.AmbientLight(0x050510,0.55));
+  const kl=new THREE.DirectionalLight(0xd4a840,1.4);kl.position.set(-6,12,8);caseSelScene.add(kl);
+  const rl=new THREE.DirectionalLight(0x1a3388,0.55);rl.position.set(8,3,-10);caseSelScene.add(rl);
+  const accentColors=[0xcc4422,0x2244cc,0x228833];
+  [[-5.5,8,0],[0,8,-1.5],[5.5,8,0]].forEach((pos,i)=>{const al=new THREE.PointLight(accentColors[i],0.6,12);al.position.set(...pos);caseSelScene.add(al);});
+  const spot=new THREE.SpotLight(0xd4af37,2.2,32,Math.PI*.16,0.35);spot.position.set(0,15,3);caseSelScene.add(spot);caseSelScene.add(spot.target);
+  const fireGlow=new THREE.PointLight(0xff7722,0.8,20);fireGlow.position.set(-9,-2,3);caseSelScene.add(fireGlow);window._caseSelFire=fireGlow;
+
+  // Floor grid
+  const floorGrid=new THREE.GridHelper(40,20,0xd4af37,0xd4af37);floorGrid.material.transparent=true;floorGrid.material.opacity=0.03;floorGrid.position.y=-4.5;caseSelScene.add(floorGrid);
+
+  buildCaseSelObjects();buildCaseSelFloor();buildCaseSelParticles();
+  canvas.addEventListener('mousemove',onCaseSelMouseMove);canvas.addEventListener('click',onCaseSelClick);
+  document.addEventListener('mousemove',e=>{caseSelCamTargetX=((e.clientX/innerWidth)*2-1)*2.0;});
+  caseSelObjects.forEach((obj,i)=>{
+    obj.mesh.position.z+=8;
+    gsap.to(obj.mesh.position,{z:obj.mesh.position.z-8,duration:1.0,delay:i*.18,ease:'power3.out'});
+    gsap.to(obj.mesh.userData.aura.material,{opacity:0.04,duration:0.8,delay:i*.18+0.4});
+    const lbl=document.getElementById(CASE_DEFS[i].labelId);
+    if(lbl)setTimeout(()=>lbl.classList.add('show'),(i*.18+0.5)*1000);
+  });
+  caseSelLoop();
+}
+
+function buildCaseSelObjects(){
+  caseSelObjects=[];
+  CASE_DEFS.forEach((def,i)=>{
+    const group=new THREE.Group();group.position.set(...def.pos);group.rotation.set(...def.rot);
+    group.userData={id:def.id,baseY:def.pos[1],idx:i,def};caseSelScene.add(group);
+    const folderMat=new THREE.MeshStandardMaterial({color:def.color,roughness:0.65,metalness:0.1,emissive:def.emissive,emissiveIntensity:0.08});
+    const folder=new THREE.Mesh(new THREE.BoxGeometry(3.0,4.0,0.12),folderMat);group.add(folder);
+    for(let p=0;p<3;p++){
+      const paper=new THREE.Mesh(new THREE.BoxGeometry(2.6,3.6,0.02),new THREE.MeshStandardMaterial({color:0xf0e8d0,roughness:0.92}));
+      paper.position.set((Math.random()-.5)*.1,(Math.random()-.5)*.08,0.08+p*.015);paper.rotation.z=(Math.random()-.5)*.04;group.add(paper);
+    }
+    const seal=new THREE.Mesh(new THREE.TorusGeometry(0.55,0.04,8,32),new THREE.MeshBasicMaterial({color:0xd4af37,transparent:true,opacity:0.45}));
+    seal.position.set(0,-0.6,0.14);group.add(seal);
+    const aura=new THREE.Mesh(new THREE.SphereGeometry(2.6,16,16),new THREE.MeshBasicMaterial({color:def.color,transparent:true,opacity:0.04,side:THREE.BackSide}));
+    group.add(aura);group.userData.aura=aura;
+    const orbit=new THREE.Mesh(new THREE.TorusGeometry(2.4,0.025,12,64),new THREE.MeshBasicMaterial({color:0xd4af37,transparent:true,opacity:0.2}));
+    orbit.rotation.x=Math.PI*.4;group.add(orbit);group.userData.orbit=orbit;
+    caseSelObjects.push({mesh:group,def,baseY:def.pos[1]});
+  });
+}
+
+function buildCaseSelFloor(){
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.MeshStandardMaterial({color:0x05050e,roughness:0.3,metalness:0.45}));
+  floor.rotation.x=-Math.PI/2;floor.position.y=-4.5;caseSelScene.add(floor);
+}
+
+function buildCaseSelParticles(){
+  const n=300,geo=new THREE.BufferGeometry(),pos=new Float32Array(n*3),vel=[];
+  for(let i=0;i<n*3;i+=3){
+    pos[i]=(Math.random()-.5)*35;pos[i+1]=(Math.random()-.5)*14;pos[i+2]=(Math.random()-.5)*25;
+    vel.push({x:(Math.random()-.5)*.006,y:(Math.random()-.5)*.004});
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const pts=new THREE.Points(geo,new THREE.PointsMaterial({color:0xc0b080,size:0.1,transparent:true,opacity:0.22,blending:THREE.AdditiveBlending,depthWrite:false}));
+  caseSelScene.add(pts);window._caseSelParticles={mesh:pts,vel,pos};
+}
+
+function onCaseSelMouseMove(e){
+  caseSelMouse.x=(e.clientX/innerWidth)*2-1;caseSelMouse.y=-(e.clientY/innerHeight)*2+1;
+  caseSelRaycaster.setFromCamera(caseSelMouse,caseSelCamera);
+  let hit=-1;
+  caseSelObjects.forEach((obj,i)=>{if(caseSelRaycaster.intersectObjects(obj.mesh.children,true).length>0)hit=i;});
+  if(hit!==caseSelHovered){caseSelHovered=hit;updateCaseSelHover();}
+}
+
+function onCaseSelClick(e){
+  caseSelRaycaster.setFromCamera(caseSelMouse,caseSelCamera);
+  let hit=-1;
+  caseSelObjects.forEach((obj,i)=>{if(caseSelRaycaster.intersectObjects(obj.mesh.children,true).length>0)hit=i;});
+  if(hit>=0)selectCase(CASE_DEFS[hit].id,hit);
+}
+
+function updateCaseSelHover(){
+  caseSelObjects.forEach((obj,i)=>{
+    const isHov=i===caseSelHovered;
+    const auraOp=isHov?.2:(caseSelHovered>=0?.02:.06);
+    gsap.to(obj.mesh.userData.aura.material,{opacity:auraOp,duration:0.45});
+    gsap.to(obj.mesh.userData.orbit.material,{opacity:isHov?.88:(caseSelHovered>=0?.12:.22),duration:0.4});
+    gsap.to(obj.mesh.position,{y:obj.mesh.userData.baseY+(isHov?.55:0),duration:0.55,ease:'power2.out'});
+    // 3D tilt toward camera on hover
+    gsap.to(obj.mesh.rotation,{x:isHov?-.12:0,y:isHov?CASE_DEFS[i].rot[1]*.5:CASE_DEFS[i].rot[1],duration:0.5});
+    const lbl=document.getElementById(CASE_DEFS[i].labelId);
+    if(lbl){lbl.classList.add('show');lbl.classList.toggle('case-hovered',isHov);lbl.style.opacity=isHov?'1':(caseSelHovered>=0?'0.35':'0.75');}
+  });
+  document.getElementById('case-sel-canvas').style.cursor=caseSelHovered>=0?'pointer':'default';
+}
+
+function updateCaseSelLabels(){
+  caseSelObjects.forEach((obj,i)=>{
+    const lbl=document.getElementById(CASE_DEFS[i].labelId);if(!lbl)return;
+    const worldPos=new THREE.Vector3();obj.mesh.getWorldPosition(worldPos);
+    const screen=worldToScreen(worldPos,caseSelCamera);
+    lbl.style.left=screen.x+'px';lbl.style.top=(screen.y+140)+'px';lbl.style.transform='translate(-50%, 0)';
+  });
+}
+
+function caseSelLoop(){
+  if(currentPhase!=='case-sel')return;
+  caseSelRaf=requestAnimationFrame(caseSelLoop);
+  const t=caseSelClock.getElapsedTime();
+  caseSelCamCurrentX+=(caseSelCamTargetX-caseSelCamCurrentX)*.045;
+  caseSelCamera.position.x=caseSelCamCurrentX;
+  // Subtle z-depth drift for extra 3D feel
+  caseSelCamera.position.z=18+Math.sin(t*.15)*.4;
+  caseSelCamera.lookAt(0,0,0);
+  caseSelObjects.forEach((obj,i)=>{
+    const isHov=i===caseSelHovered;
+    obj.mesh.position.y=obj.mesh.userData.baseY+Math.sin(t*.65+i*1.4)*.1+(isHov?.5:0);
+    if(obj.mesh.userData.orbit)obj.mesh.userData.orbit.rotation.z=t*.25*(i%2===0?1:-1);
+    obj.mesh.children.forEach(ch=>{if(ch.material&&ch.material.emissiveIntensity!==undefined)ch.material.emissiveIntensity=0.06+Math.sin(t*1.2+i)*.04;});
+  });
+  if(window._caseSelParticles){
+    const ps=window._caseSelParticles,p=ps.mesh.geometry.attributes.position.array;
+    ps.vel.forEach((v,i)=>{const x=i*3;p[x]+=v.x;p[x+1]+=v.y;if(Math.abs(p[x])>17)p[x]*=-.95;if(Math.abs(p[x+1])>7)p[x+1]*=-.95;});
+    ps.mesh.geometry.attributes.position.needsUpdate=true;
+  }
+  if(window._caseSelFire)window._caseSelFire.intensity=0.7+Math.sin(t*8.4)*.2+Math.sin(t*14.2)*.1;
+  updateCaseSelLabels();
+  caseSelRenderer.render(caseSelScene,caseSelCamera);
+}
+
+function selectCase(caseId,idx){
+  const obj=caseSelObjects[idx].mesh,worldPos=new THREE.Vector3();obj.getWorldPosition(worldPos);
+  gsap.to(caseSelCamera.position,{x:worldPos.x*.4,y:worldPos.y+0.3,z:6,duration:1.3,ease:'power3.inOut',onComplete:()=>transitionToMindPalace(caseId)});
+  gsap.to(obj.userData.aura.material,{opacity:0.35,duration:0.8});
+  caseSelObjects.forEach((o,i)=>{if(i!==idx)gsap.to(o.mesh.position,{z:o.mesh.position.z-5,duration:0.8,ease:'power2.in'});});
+}
+
+function transitionToMindPalace(caseId){
+  const wipe=document.getElementById('scene-wipe');wipe.classList.add('in');
+  setTimeout(()=>{
+    currentPhase='mind-palace';cancelAnimationFrame(caseSelRaf);
+    document.getElementById('case-sel-canvas').style.display='none';
+    document.getElementById('case-sel-title').classList.remove('show');
+    document.getElementById('case-sel-hint').style.opacity='0';
+    ['cl-gtr','cl-band','cl-hound'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('show');});
+    activeCase=CASES.find(c=>c.id===caseId)||CASES[0];activeCaseChapter=0;
+    document.getElementById('three-canvas').style.display='block';
+    initThree();
+    enterMindPalaceHub();
+    wipe.classList.remove('in');wipe.classList.add('out');
+    setTimeout(()=>wipe.classList.remove('out'),700);
+  },680);
+}
+
+function enterMindPalaceHub(){
+  showScreen('s-hub');
+  document.getElementById('hub-title').classList.add('show');
+  const exitBtn=document.getElementById('hub-to-entry');if(exitBtn)exitBtn.classList.add('show');
+  const eyebrow=document.getElementById('hub-eyebrow');const caseName=document.getElementById('hub-case-name');
+  if(eyebrow)eyebrow.textContent='THE MIND PALACE';
+  if(caseName&&activeCase)caseName.textContent='— '+activeCase.title.toUpperCase()+' —';
+  buildPortalLabels();
+  const labels=document.querySelectorAll('.portal-label');
+  labels.forEach((l,i)=>{
+    l.classList.remove('show');l.style.opacity='0';l.style.transform='translate(-50%,-50%) scale(0.6) translateY(20px)';
+    setTimeout(()=>{
+      l.classList.add('show');
+      l.style.transform='translate(-50%,-50%) scale(1)';
+      l.style.transition='opacity .7s ease, transform .7s cubic-bezier(.34,1.56,.64,1)';
+    },350+i*160);
+  });
+  document.getElementById('ded-mode-btn').style.display='flex';
+  if(activeCase&&SHERLOCK_LINES.caseEnter)sherlockSpeak('caseEnter');else sherlockSpeak('hubQuotes');
+}
+
+// roundRect polyfill
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
+    this.beginPath();this.moveTo(x+r,y);this.lineTo(x+w-r,y);this.quadraticCurveTo(x+w,y,x+w,y+r);
+    this.lineTo(x+w,y+h-r);this.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    this.lineTo(x+r,y+h);this.quadraticCurveTo(x,y+h,x,y+h-r);
+    this.lineTo(x,y+r);this.quadraticCurveTo(x,y,x+r,y);this.closePath();
+  };
+}
+
+window.addEventListener('load',()=>{
+  buildPortalLabels();
+  document.getElementById('tl-track').addEventListener('wheel',e=>{e.preventDefault();document.getElementById('tl-track').scrollLeft+=e.deltaY;},{passive:false});
+  const fill=document.getElementById('load-fill');let v=0;
+  const iv=setInterval(()=>{
+    v+=Math.random()*20+2;if(v>=100){
+      v=100;clearInterval(iv);
+      setTimeout(()=>{
+        document.getElementById('loading').classList.add('fade');
+        setTimeout(()=>{
+          document.getElementById('loading').style.display='none';
+          initEntryHub();
+          document.getElementById('s-entry').classList.add('show');
+          setTimeout(()=>{document.getElementById('entry-title').classList.add('show');document.getElementById('entry-bottom').classList.add('show');},600);
+          setTimeout(()=>{'lbl-case lbl-shop lbl-watch'.split(' ').forEach((id,i)=>setTimeout(()=>{const el=document.getElementById(id);if(el)el.classList.add('show');},i*200));},1400);
+        },1300);
+      },500);
+    }
+    fill.style.width=v+'%';
+  },180);
+});
+
+function goHub(){
+  if(currentPhase==='mind-palace'){
+    if(typeof deductionActive!=='undefined'&&deductionActive)toggleDeductionMode();
+    if(currentScreen==='s-suspects'){cancelAnimationFrame(suspAnimFrame2);suspAnimFrame2=null;document.getElementById('susp-info').classList.remove('show');}
+    enterMindPalaceHub();return;
+  }
+  const wipe=document.getElementById('scene-wipe');wipe.classList.add('in');
+  setTimeout(()=>{
+    if(typeof deductionActive!=='undefined'&&deductionActive)toggleDeductionMode();
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('show'));
+    document.getElementById('hub-title')?.classList.remove('show');
+    document.querySelectorAll('.portal-label').forEach(l=>l.classList.remove('show'));
+    currentPhase='entry';
+    if(typeof caseSelRaf!=='undefined')cancelAnimationFrame(caseSelRaf);
+    document.getElementById('case-sel-canvas').style.display='none';
+    document.getElementById('case-sel-title').classList.remove('show');
+    document.getElementById('case-sel-hint').style.opacity='0';
+    ['cl-gtr','cl-band','cl-hound'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('show');});
+    document.getElementById('three-canvas').style.display='none';
+    document.getElementById('entry-canvas').style.display='block';
+    document.getElementById('s-entry').classList.add('show');
+    document.getElementById('entry-title').classList.add('show');
+    document.getElementById('entry-bottom').classList.add('show');
+    if(entryCamera){entryCamera.position.set(0,1.2,18);entryCamera.lookAt(0,0.5,0);entryCamera.rotation.set(0,0,0);}
+    if(entryObjects&&entryObjects.shelf)gsap.to(entryObjects.shelf.position,{z:-3.5,duration:0.5});
+    if(entryObjects&&entryObjects.projector)gsap.to(entryObjects.projector.position,{z:-1.5,duration:0.5});
+    entryLoop();
+    setTimeout(()=>{'lbl-case lbl-shop lbl-watch'.split(' ').forEach((id,i)=>setTimeout(()=>{const el=document.getElementById(id);if(el)el.classList.add('show');},i*150));},400);
+    wipe.classList.remove('in');wipe.classList.add('out');setTimeout(()=>wipe.classList.remove('out'),700);
+  },650);
+}
+</script>
 </body>
 </html>
